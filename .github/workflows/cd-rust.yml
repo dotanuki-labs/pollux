@@ -1,0 +1,131 @@
+# Copyright 2025 Dotanuki Labs
+# SPDX-License-Identifier: MIT
+
+name: cd-rust
+
+on:
+  workflow_call:
+    secrets:
+      CRATESIO_PUBLISH_TOKEN:
+        required: true
+      DOTANUKI_BOT_TOKEN:
+        required: true
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ warp-ubuntu-2404-x64-4x, warp-macos-15-arm64-6x ] # os: [ ubuntu-24.04, macos-15 ]
+
+    steps:
+      - name: Project Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust tools
+        uses: ./.github/actions/setup-rust
+        with:
+          install-extra-tools: true
+
+      - name: Generates build artifacts
+        run: cargo xtasks artifacts binaries
+
+      - name: Archive binaries
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pollux-binaries-${{ runner.os }}
+          path: artifacts
+
+  extras:
+    needs: build
+    runs-on: warp-ubuntu-2404-x64-4x
+
+    steps:
+      - name: Project Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Fetch executable from previous build
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          path: artifacts
+          pattern: pollux-binaries-*
+
+      - name: Setup Rust tools
+        uses: ./.github/actions/setup-rust
+
+      - name: Generate additional artifacts
+        run: cargo xtasks artifacts extras
+
+      - name: Archive checksums
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: checksums.txt
+          path: artifacts/checksums.txt
+
+      - name: Archive SBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom-${{ github.sha }}.json
+          path: crates/pollux/pollux.cdx.json
+
+  github:
+    needs: extras
+    runs-on: warp-ubuntu-2404-x64-4x
+
+    steps:
+      - name: Project Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Fetch binaries from previous build
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          path: artifacts
+          pattern: pollux-binaries-*
+
+      - name: Build provenance for binaries
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+        with:
+          subject-path: artifacts/**/*
+
+      - name: Fetch checksums from previous build
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          path: artifacts
+          pattern: checksums.txt
+
+      - name: Compute current version
+        id: release-tag
+        uses: ./.github/actions/compute-version
+
+      - name: Publish draft release on Github
+        uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836 # v2.3.3
+        with:
+          name: ${{ steps.release-tag.outputs.version }}
+          tag_name: ${{ steps.release-tag.outputs.version }}
+          token: ${{ secrets.DOTANUKI_BOT_TOKEN }}
+          generate_release_notes: true
+          draft: true
+          files: |
+            artifacts/**/*
+
+  cratesio:
+    needs: github
+    runs-on: warp-ubuntu-2404-x64-4x
+
+    steps:
+      - name: Project Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust tools
+        uses: ./.github/actions/setup-rust
+
+      - name: Publish on crates.io
+        run: cargo publish -p pollux --token ${{ secrets.CRATESIO_PUBLISH_TOKEN }} --dry-run # zizmor: ignore[use-trusted-publishing]

@@ -1,0 +1,20 @@
+# Copyright 2025 Dotanuki Labs
+# SPDX-License-Identifier: MIT
+
+name: "Compute current version"
+description: "Find the current version for a release based on cargo.toml"
+
+outputs:
+  computed:
+    description: "The actual software version declared on cargo.toml"
+    value: ${{ steps.compute.outputs.version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Compute actual version
+      shell: bash
+      id: compute
+      run: |
+        version=$(grep 'version' Cargo.toml | head -1 | sed "s/version[[:space:]]=[[:space:]]//g" | tr -d '"')
+        echo "version=$version" >>"$GITHUB_OUTPUT"

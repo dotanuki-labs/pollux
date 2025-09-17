@@ -1,0 +1,11 @@
+# Rust builds
+/target
+artifacts
+pollux.cdx.json
+xtasks.cdx.json
+
+# IDE environment
+.fleet
+.DS_STORE
+.idea
+

@@ -1,0 +1,139 @@
+# Copyright 2025 Dotanuki Labs
+# SPDX-License-Identifier: MIT
+
+name: ci-rust
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    runs-on: warp-ubuntu-2404-x64-2x # ubuntu-24.04
+    steps:
+      - name: Project checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Checking formatting of Rust code (rustfmt)
+        run: cargo fmt --check
+
+      - name: Checking smells in Rust code (clippy)
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  tests:
+    runs-on: warp-ubuntu-2404-x64-4x # ubuntu-24.04
+    steps:
+      - name: Project checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust tools
+        uses: ./.github/actions/setup-rust
+
+      - name: Run project tests
+        run: cargo xtasks tests
+
+  security:
+    needs: [lint, tests]
+    runs-on: warp-ubuntu-2404-x64-4x
+
+    steps:
+      - name: Project checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Check issues with supply chain
+        run: cargo xtasks security
+
+  build:
+    needs: [lint, tests]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ warp-ubuntu-2404-x64-4x, warp-macos-15-arm64-6x ] # os: [ ubuntu-24.04, macos-15 ]
+
+    steps:
+      - name: Project checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust tools
+        uses: ./.github/actions/setup-rust
+        with:
+          install-extra-tools: true
+
+      - name: Generates build artifacts
+        run: cargo xtasks artifacts binaries
+
+      - name: Archive binaries
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pollux-binaries-${{ runner.os }}
+          path: artifacts
+
+  extras:
+    needs: build
+    runs-on: warp-ubuntu-2404-x64-4x
+
+    steps:
+      - name: Project checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Fetch executable from previous build
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          path: artifacts
+          pattern: pollux-binaries-*
+
+      - name: Setup Rust tools
+        uses: ./.github/actions/setup-rust
+
+      - name: Generate additional artifacts
+        run: cargo xtasks artifacts extras
+
+      - name: Archive checksums
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: checksums.txt
+          path: artifacts/checksums.txt
+
+      - name: Archive SBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom-${{ github.sha }}.json
+          path: crates/pollux/pollux.cdx.json
+
+  publish:
+    needs: build
+    runs-on: warp-ubuntu-2404-x64-4x
+    services:
+      local-registry:
+        image: ghcr.io/kellnr/kellnr:5@sha256:8c8478df4127c623a8f8a7e573c50e3c0beec062c7d9d90823b66c9c5dbc3646
+        ports:
+          - 8000:8000
+        options: >-
+          --health-cmd "curl -f http://localhost:8000/api/v1/health"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Project checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust tools
+        uses: ./.github/actions/setup-rust
+
+      - name: Publish on local registry
+        run: cargo publish -p pollux --registry local # zizmor: ignore[use-trusted-publishing]

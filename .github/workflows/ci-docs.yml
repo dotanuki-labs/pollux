@@ -1,0 +1,22 @@
+# Copyright 2025 Dotanuki Labs
+# SPDX-License-Identifier: MIT
+
+name: ci-docs
+
+on:
+  workflow_call:
+
+jobs:
+  lint-build:
+    runs-on: warp-ubuntu-2404-x64-2x # ubuntu-24.04
+    steps:
+      - name: Project checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Lint Markdown files
+        uses: dotanuki-labs/github-actions/quality/markdown@a25d200bd37cec3467c6030e63e914fd03e69180
+
+      - name: Build and archive documentation assets
+        uses: dotanuki-labs/github-actions/foss/prepare-ghpages@a25d200bd37cec3467c6030e63e914fd03e69180

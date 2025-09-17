@@ -1,0 +1,26 @@
+# Copyright 2025 Dotanuki Labs
+# SPDX-License-Identifier: MIT
+
+name: cd-docs
+
+on:
+  workflow_call:
+
+jobs:
+  deploy-pages:
+    runs-on: warp-ubuntu-2404-x64-2x # ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Prepare documentation assets
+        uses: dotanuki-labs/github-actions/foss/prepare-ghpages@a25d200bd37cec3467c6030e63e914fd03e69180
+
+      - name: Deploy assets to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

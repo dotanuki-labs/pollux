@@ -1,0 +1,24 @@
+[package]
+name = "pollux"
+description = "An opinionated way to kick-off CLI apps powered by Rust"
+authors.workspace = true
+edition.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+better-panic.workspace = true
+clap = { workspace = true, features = ["derive"] }
+human-panic.workspace = true
+tikv-jemallocator.workspace = true
+console.workspace = true
+
+[dev-dependencies]
+assert_cmd.workspace = true
+predicates.workspace = true

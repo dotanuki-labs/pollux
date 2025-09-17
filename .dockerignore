@@ -1,0 +1,14 @@
+.cargo
+.git
+.github
+.gitattributes
+.markdownlint.yaml
+.mergify.yml
+.editorconfig
+committed.toml
+deny.toml
+lychee.toml
+rustfmt.toml
+Dockerfile
+LICENSE
+README.md

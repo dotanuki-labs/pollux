@@ -1,0 +1,45 @@
+# Copyright 2025 Dotanuki Labs
+# SPDX-License-Identifier: MIT
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  compliance:
+    uses: ./.github/workflows/ci-compliance.yml
+    permissions:
+      contents: read
+
+  docs:
+    needs: compliance
+    uses: ./.github/workflows/ci-docs.yml
+    permissions:
+      contents: read
+      pages: read
+      id-token: write
+
+  docker:
+    needs: compliance
+    uses: ./.github/workflows/ci-docker.yml
+    permissions:
+      contents: read
+
+  rust:
+    needs: compliance
+    uses: ./.github/workflows/ci-rust.yml
+    permissions:
+      contents: read
+
+  all-checks:
+    runs-on: warp-ubuntu-2204-arm64-2x
+    needs: [compliance, docs, rust, docker]
+    permissions:
+      contents: read
+    steps:
+      - name: Report success
+        run: echo "Great job ✅"

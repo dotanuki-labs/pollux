@@ -1,0 +1,30 @@
+[target.'cfg(all())']
+rustflags = [
+    # Extended checks for clippy
+    "-Dunsafe_code",
+    "-Wclippy::all",
+    "-Wclippy::todo",
+    "-Wclippy::unimplemented",
+    "-Wclippy::unnested_or_patterns",
+    "-Wclippy::zero_sized_map_values",
+    "-Wfuture_incompatible",
+    "-Wnonstandard_style",
+    "-Wrust_2018_idioms",
+]
+
+[target.x86_64-unknown-linux-musl]
+linker = "rust-lld"
+rustflags = ["-Ctarget-feature=+crt-static"]
+
+[target.aarch64-unknown-linux-musl]
+linker = "aarch64-linux-gnu-gcc"
+rustflags = ["-Ctarget-feature=+crt-static"]
+
+[alias]
+xtasks = "run --manifest-path ./crates/xtasks/Cargo.toml --"
+
+# Utility for tests
+[registries.local]
+index = "sparse+http://localhost:8000/api/v1/crates/"
+credential-provider = ["cargo:token"]
+token = "Zy9HhJ02RJmg0GCrgLfaCVfU6IwDfhXD"
