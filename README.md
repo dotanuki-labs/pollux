@@ -6,11 +6,8 @@
 >
 > Before open-sourcing this project :
 >
-> - Enable Github pages for repository
 > - Move from WarpBuild to Github runners
 > - Ensure required secrets are properly set (DOTANUKI_BOT and CRATES_PUBLISH)
-> - Ensure proper short project description set for this repository
-> - Ensure the same description is also set on cargo.toml files
 > - Ensure proper categories set on cargo.toml files
 
 ## Using

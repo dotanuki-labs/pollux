@@ -7,13 +7,13 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.89.0"
 authors = ["dotanuki.labs@gmail.com"]
-description = "An opinionated way to kick-off CLI apps powered by Rust"
+description = "Evaluate provenance and reproducibility of your Rust supply chain"
 repository = "https://github.com/dotanuki-labs/pollux"
 homepage = "https://github.com/dotanuki-labs/pollux"
 documentation = "https://github.com/dotanuki-labs/pollux"
 readme = "README.md"
 license = "MIT"
-categories = ["command-line-utilities"]
+categories = ["command-line-utilities", "security"]
 
 [workspace.dependencies]
 pollux = { path = "crates/pollux" }
