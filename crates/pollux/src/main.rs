@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 mod core;
+mod infra;
 
 use clap::Parser;
 use console::style;
@@ -22,6 +23,6 @@ fn main() {
     human_panic::setup_panic!();
 
     let arguments = ProgramArguments::parse();
-    let greet = core::greet(&arguments.name).expect("Expecting a greet!");
+    let greet = format!("Hello, {}!", arguments.name);
     println!("{}", style(greet).green());
 }
