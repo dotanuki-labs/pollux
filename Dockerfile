@@ -10,12 +10,12 @@ FROM rust:alpine3.21@sha256:8f717b9506b922815d461317b6ac40d2cddc0f77867809509a5f
 
 RUN apk update && \
     apk upgrade --no-cache && \
-    apk add --no-cache lld mold musl musl-dev libc-dev cmake clang clang-dev openssl file \
+    apk add --no-cache lld mold musl musl-dev libc-dev cmake clang clang-dev openssl perl file \
         libressl-dev git build-base bash curl zip gnupg coreutils gcc g++ zstd binutils ca-certificates
 
 WORKDIR /src
 COPY . ./
-RUN cargo build --release
+RUN cargo build -p pollux --release
 
 
 FROM alpine@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1 AS extras
