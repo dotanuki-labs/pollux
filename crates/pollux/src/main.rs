@@ -5,7 +5,6 @@ mod core;
 mod infra;
 
 use crate::core::{CrateInfo, TruthfulnessEvaluator};
-use crate::infra::{OssRebuildEvaluator, ReproducibleBuildsEvaluator};
 use clap::Parser;
 use console::style;
 use tikv_jemallocator::Jemalloc;
@@ -36,7 +35,7 @@ async fn main() {
     let arguments = ProgramArguments::parse();
 
     let trusted_publishing_evaluator = infra::factories::trusted_publishing_evaluator();
-    let reproducible_builds_evaluator = ReproducibleBuildsEvaluator::FromOssRebuild(OssRebuildEvaluator {});
+    let reproducible_builds_evaluator = infra::factories::reproducible_builds_evaluator();
     let evaluator = TruthfulnessEvaluator::new(trusted_publishing_evaluator, reproducible_builds_evaluator);
 
     let parts = arguments.name.split("@").collect::<Vec<_>>();
@@ -44,5 +43,5 @@ async fn main() {
 
     let evaluation = evaluator.evaluate(&crates_info).await.unwrap();
 
-    println!("{:?}", style(evaluation).cyan());
+    println!("For {} : truthfulness = {:?} ", crates_info, style(evaluation).cyan());
 }

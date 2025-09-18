@@ -2,15 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 pub mod cratesio;
+mod ossrebuild;
 
 use crate::core::{CrateInfo, TruthfulnessEvaluation};
 use crate::infra::cratesio::CratesIOEvaluator;
+use crate::infra::ossrebuild::OssRebuildEvaluator;
 use reqwest::Client;
 
 pub type HTTPClient = Client;
-
-#[allow(dead_code)]
-pub struct OssRebuildEvaluator;
 
 #[allow(dead_code)]
 pub enum TrustedPublishingEvaluator {
@@ -40,7 +39,7 @@ pub enum ReproducibleBuildsEvaluator {
 impl TruthfulnessEvaluation for ReproducibleBuildsEvaluator {
     async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool> {
         match self {
-            ReproducibleBuildsEvaluator::FromOssRebuild(_) => Ok(true),
+            ReproducibleBuildsEvaluator::FromOssRebuild(delegate) => delegate.evaluate(crate_info).await,
             #[cfg(test)]
             ReproducibleBuildsEvaluator::Fake(crates) => Ok(crates.contains(crate_info)),
         }
@@ -49,7 +48,8 @@ impl TruthfulnessEvaluation for ReproducibleBuildsEvaluator {
 
 pub mod factories {
     use crate::infra::cratesio::CratesIOEvaluator;
-    use crate::infra::{HTTPClient, TrustedPublishingEvaluator};
+    use crate::infra::ossrebuild::OssRebuildEvaluator;
+    use crate::infra::{HTTPClient, ReproducibleBuildsEvaluator, TrustedPublishingEvaluator};
     use reqwest::header;
     use std::sync::{Arc, LazyLock};
 
@@ -64,10 +64,16 @@ pub mod factories {
     });
 
     static CRATES_IO_API: &str = "https://crates.io";
+    static OSS_REBUILD_CRATES_IO_URL: &str = "https://storage.googleapis.com/google-rebuild-attestations/cratesio";
 
     pub fn trusted_publishing_evaluator() -> TrustedPublishingEvaluator {
         let delegate = CratesIOEvaluator::new(CRATES_IO_API.to_string(), HTTP_CLIENT.clone());
         TrustedPublishingEvaluator::FromCratesIO(delegate)
+    }
+
+    pub fn reproducible_builds_evaluator() -> ReproducibleBuildsEvaluator {
+        let delegate = OssRebuildEvaluator::new(OSS_REBUILD_CRATES_IO_URL.to_string(), HTTP_CLIENT.clone());
+        ReproducibleBuildsEvaluator::FromOssRebuild(delegate)
     }
 }
 
