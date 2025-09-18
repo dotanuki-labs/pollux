@@ -15,10 +15,16 @@ version.workspace = true
 anyhow.workspace = true
 better-panic.workspace = true
 clap = { workspace = true, features = ["derive"] }
-human-panic.workspace = true
-tikv-jemallocator.workspace = true
 console.workspace = true
+env_logger.workspace = true
+human-panic.workspace = true
+log.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+tikv-jemallocator.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
+assertor.workspace = true
 assert_cmd.workspace = true
-predicates.workspace = true
+httpmock.workspace = true
