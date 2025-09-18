@@ -4,7 +4,7 @@
 pub mod cratesio;
 mod ossrebuild;
 
-use crate::core::{CrateInfo, TruthfulnessEvaluation};
+use crate::core::{CrateInfo, VeracityEvaluation};
 use crate::infra::cratesio::CratesIOEvaluator;
 use crate::infra::ossrebuild::OssRebuildEvaluator;
 use reqwest::Client;
@@ -12,36 +12,36 @@ use reqwest::Client;
 pub type HTTPClient = Client;
 
 #[allow(dead_code)]
-pub enum TrustedPublishingEvaluator {
-    FromCratesIO(CratesIOEvaluator),
+pub enum CrateProvenanceEvaluator {
+    CratesOfficialRegistry(CratesIOEvaluator),
     #[cfg(test)]
-    Fake(FakeTruthfulnessEvaluator),
+    FakeRegistry(FakeTruthfulnessEvaluator),
 }
 
-impl TruthfulnessEvaluation for TrustedPublishingEvaluator {
+impl VeracityEvaluation for CrateProvenanceEvaluator {
     async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool> {
         match self {
-            TrustedPublishingEvaluator::FromCratesIO(evaluator) => evaluator.evaluate(crate_info).await,
+            CrateProvenanceEvaluator::CratesOfficialRegistry(evaluator) => evaluator.evaluate(crate_info).await,
             #[cfg(test)]
-            TrustedPublishingEvaluator::Fake(evaluator) => evaluator.evaluate(crate_info).await,
+            CrateProvenanceEvaluator::FakeRegistry(evaluator) => evaluator.evaluate(crate_info).await,
         }
     }
 }
 
 #[allow(dead_code)]
-pub enum ReproducibleBuildsEvaluator {
-    FromOssRebuild(OssRebuildEvaluator),
+pub enum CrateBuildReproducibilityEvaluator {
+    GoogleOssRebuild(OssRebuildEvaluator),
     #[cfg(test)]
-    Fake(Vec<CrateInfo>),
+    FakeRebuilder(Vec<CrateInfo>),
 }
 
 #[allow(unused_variables)]
-impl TruthfulnessEvaluation for ReproducibleBuildsEvaluator {
+impl VeracityEvaluation for CrateBuildReproducibilityEvaluator {
     async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool> {
         match self {
-            ReproducibleBuildsEvaluator::FromOssRebuild(delegate) => delegate.evaluate(crate_info).await,
+            CrateBuildReproducibilityEvaluator::GoogleOssRebuild(delegate) => delegate.evaluate(crate_info).await,
             #[cfg(test)]
-            ReproducibleBuildsEvaluator::Fake(crates) => Ok(crates.contains(crate_info)),
+            CrateBuildReproducibilityEvaluator::FakeRebuilder(crates) => Ok(crates.contains(crate_info)),
         }
     }
 }
@@ -49,7 +49,7 @@ impl TruthfulnessEvaluation for ReproducibleBuildsEvaluator {
 pub mod factories {
     use crate::infra::cratesio::CratesIOEvaluator;
     use crate::infra::ossrebuild::OssRebuildEvaluator;
-    use crate::infra::{HTTPClient, ReproducibleBuildsEvaluator, TrustedPublishingEvaluator};
+    use crate::infra::{CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator, HTTPClient};
     use reqwest::header;
     use std::sync::{Arc, LazyLock};
 
@@ -66,14 +66,14 @@ pub mod factories {
     static CRATES_IO_API: &str = "https://crates.io";
     static OSS_REBUILD_CRATES_IO_URL: &str = "https://storage.googleapis.com/google-rebuild-attestations/cratesio";
 
-    pub fn trusted_publishing_evaluator() -> TrustedPublishingEvaluator {
+    pub fn provenance_evaluator() -> CrateProvenanceEvaluator {
         let delegate = CratesIOEvaluator::new(CRATES_IO_API.to_string(), HTTP_CLIENT.clone());
-        TrustedPublishingEvaluator::FromCratesIO(delegate)
+        CrateProvenanceEvaluator::CratesOfficialRegistry(delegate)
     }
 
-    pub fn reproducible_builds_evaluator() -> ReproducibleBuildsEvaluator {
+    pub fn reproducibility_evaluator() -> CrateBuildReproducibilityEvaluator {
         let delegate = OssRebuildEvaluator::new(OSS_REBUILD_CRATES_IO_URL.to_string(), HTTP_CLIENT.clone());
-        ReproducibleBuildsEvaluator::FromOssRebuild(delegate)
+        CrateBuildReproducibilityEvaluator::GoogleOssRebuild(delegate)
     }
 }
 
@@ -81,7 +81,7 @@ pub mod factories {
 pub struct FakeTruthfulnessEvaluator(Vec<CrateInfo>);
 
 #[cfg(test)]
-impl TruthfulnessEvaluation for FakeTruthfulnessEvaluator {
+impl VeracityEvaluation for FakeTruthfulnessEvaluator {
     async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool> {
         Ok(self.0.contains(crate_info))
     }

@@ -4,7 +4,7 @@
 mod core;
 mod infra;
 
-use crate::core::{CrateInfo, TruthfulnessEvaluator};
+use crate::core::CrateInfo;
 use clap::Parser;
 use console::style;
 use tikv_jemallocator::Jemalloc;
@@ -34,14 +34,15 @@ async fn main() {
 
     let arguments = ProgramArguments::parse();
 
-    let trusted_publishing_evaluator = infra::factories::trusted_publishing_evaluator();
-    let reproducible_builds_evaluator = infra::factories::reproducible_builds_evaluator();
-    let evaluator = TruthfulnessEvaluator::new(trusted_publishing_evaluator, reproducible_builds_evaluator);
+    let veracity_evaluator = core::factory::create_veracity_evaluator(
+        infra::factories::provenance_evaluator,
+        infra::factories::reproducibility_evaluator,
+    );
 
     let parts = arguments.name.split("@").collect::<Vec<_>>();
     let crates_info = CrateInfo::new(parts[0].to_string(), parts[1].to_string());
 
-    let evaluation = evaluator.evaluate(&crates_info).await.unwrap();
+    let evaluation = veracity_evaluator.evaluate(&crates_info).await.unwrap();
 
     println!("For {} : truthfulness = {:?} ", crates_info, style(evaluation).cyan());
 }

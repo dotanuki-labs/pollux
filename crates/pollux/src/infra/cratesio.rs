@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::{CrateInfo, TruthfulnessEvaluation};
+use crate::core::{CrateInfo, VeracityEvaluation};
 use crate::infra::HTTPClient;
 use serde::Deserialize;
 use std::fmt::Display;
@@ -44,7 +44,7 @@ impl CratesIOEvaluator {
     }
 }
 
-impl TruthfulnessEvaluation for CratesIOEvaluator {
+impl VeracityEvaluation for CratesIOEvaluator {
     async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool> {
         let endpoint = format!(
             "{}/api/v1/crates/{}/{}",
@@ -72,10 +72,10 @@ impl TruthfulnessEvaluation for CratesIOEvaluator {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{CrateInfo, TruthfulnessEvaluation};
+    use crate::core::{CrateInfo, VeracityEvaluation};
     use crate::infra::cratesio::CratesIOEvaluator;
     use crate::infra::factories;
-    use assertor::BooleanAssertion;
+    use assertor::{BooleanAssertion, ResultAssertion};
     use httpmock::{MockServer, Then, When};
 
     fn responds_with_existing_provenance(crate_name: &str, crate_version: &str) -> impl FnOnce(When, Then) {
@@ -135,15 +135,28 @@ mod tests {
         }
     }
 
+    fn responds_without_server_error(crate_name: &str, crate_version: &str) -> impl FnOnce(When, Then) {
+        move |when, then| {
+            when.method("GET")
+                .path(format!("/api/v1/crates/{}/{}", crate_name, crate_version));
+
+            then.status(503)
+                .header("content-type", "application/text; charset=UTF-8")
+                .body("internal error");
+        }
+    }
+
     #[tokio::test]
-    async fn should_evaluate_provenance_when_available() {
+    async fn should_evaluate_crate_provenance_when_available() {
+        let crate_name = "bon";
+        let crate_version = "3.7.2";
+        let crate_info = CrateInfo::with(crate_name, crate_version);
+
         let mock_server = MockServer::start();
         let evaluator = CratesIOEvaluator::new(mock_server.base_url(), factories::HTTP_CLIENT.clone());
 
-        let response_with_provenance = responds_with_existing_provenance("bon", "3.7.2");
-
-        let mocked = mock_server.mock(response_with_provenance);
-        let crate_info = CrateInfo::new("bon".to_string(), "3.7.2".to_string());
+        let with_provenance = responds_with_existing_provenance(crate_name, crate_version);
+        let mocked = mock_server.mock(with_provenance);
 
         let evaluation = evaluator.evaluate(&crate_info).await.unwrap();
 
@@ -152,19 +165,39 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn should_evaluate_provenance_when_not_available() {
+    async fn should_evaluate_crate_provenance_when_not_available() {
+        let crate_name = "canopus";
+        let crate_version = "0.1.1";
+        let crate_info = CrateInfo::with(crate_name, crate_version);
+
         let mock_server = MockServer::start();
         let evaluator = CratesIOEvaluator::new(mock_server.base_url(), factories::HTTP_CLIENT.clone());
 
-        let response_without_provenance = responds_without_provenance("canopus", "0.1.1");
+        let without_provenance = responds_without_provenance(crate_name, crate_version);
 
-        let mocked = mock_server.mock(response_without_provenance);
-
-        let crate_info = CrateInfo::new("canopus".to_string(), "0.1.1".to_string());
+        let mocked = mock_server.mock(without_provenance);
 
         let evaluation = evaluator.evaluate(&crate_info).await.unwrap();
 
         mocked.assert();
         assertor::assert_that!(evaluation).is_false()
+    }
+
+    #[tokio::test]
+    async fn should_evaluate_provenance_when_server_not_available() {
+        let crate_name = "canopus";
+        let crate_version = "0.0.1";
+        let crate_info = CrateInfo::with(crate_name, crate_version);
+
+        let mock_server = MockServer::start();
+        let evaluator = CratesIOEvaluator::new(mock_server.base_url(), factories::HTTP_CLIENT.clone());
+
+        let not_found = responds_without_server_error(crate_name, crate_version);
+        let mocked = mock_server.mock(not_found);
+
+        let evaluation = evaluator.evaluate(&crate_info).await;
+
+        mocked.assert();
+        assertor::assert_that!(evaluation).is_err()
     }
 }
