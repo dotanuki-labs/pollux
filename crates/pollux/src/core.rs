@@ -1,7 +1,9 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::infra::{CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator};
+use crate::infra::{
+    CachedVeracityEvaluator, CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator, VeracityEvaluationStorage,
+};
 use std::fmt::Display;
 
 #[derive(Debug, PartialEq)]
@@ -30,62 +32,121 @@ impl Display for CrateInfo {
     }
 }
 
-#[allow(dead_code)]
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash, Eq)]
 pub enum VeracityFactor {
     ReproducibleBuilds,
     ProvenanceAttested,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash, Eq)]
 pub enum CrateVeracityLevel {
     NotAvailable,
     SingleFactor(VeracityFactor),
     TwoFactors,
 }
 
-#[allow(dead_code)]
-pub trait VeracityEvaluation {
-    async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool>;
-}
+impl CrateVeracityLevel {
+    pub fn to_booleans(&self) -> (bool, bool) {
+        match self {
+            CrateVeracityLevel::NotAvailable => (false, false),
+            CrateVeracityLevel::SingleFactor(factor) => match factor {
+                VeracityFactor::ReproducibleBuilds => (false, true),
+                VeracityFactor::ProvenanceAttested => (true, false),
+            },
+            CrateVeracityLevel::TwoFactors => (true, true),
+        }
+    }
 
-pub struct CrateVeracityEvaluator {
-    provenance: CrateProvenanceEvaluator,
-    reproducibility: CrateBuildReproducibilityEvaluator,
-}
-
-impl CrateVeracityEvaluator {
-    pub async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<CrateVeracityLevel> {
-        let uses_trusted_publishing = self.provenance.evaluate(crate_info).await?;
-        let has_reproduced_build = self.reproducibility.evaluate(crate_info).await?;
-
-        let verification = match (uses_trusted_publishing, has_reproduced_build) {
+    pub fn from_booleans(provenance: bool, rebuilds: bool) -> Self {
+        match (provenance, rebuilds) {
             (true, true) => CrateVeracityLevel::TwoFactors,
             (false, true) => CrateVeracityLevel::SingleFactor(VeracityFactor::ReproducibleBuilds),
             (true, false) => CrateVeracityLevel::SingleFactor(VeracityFactor::ProvenanceAttested),
             (false, false) => CrateVeracityLevel::NotAvailable,
-        };
-
-        Ok(verification)
+        }
     }
+}
 
-    fn new(provenance: CrateProvenanceEvaluator, reproducibility: CrateBuildReproducibilityEvaluator) -> Self {
+pub trait VeracityEvaluation {
+    async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool>;
+}
+
+pub trait CrateVeracityEvaluation {
+    async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<CrateVeracityLevel>;
+}
+
+pub struct CombinedVeracityEvaluator {
+    cache: CachedVeracityEvaluator,
+    provenance: CrateProvenanceEvaluator,
+    reproducibility: CrateBuildReproducibilityEvaluator,
+}
+
+impl CombinedVeracityEvaluator {
+    fn new(
+        cache: CachedVeracityEvaluator,
+        provenance: CrateProvenanceEvaluator,
+        reproducibility: CrateBuildReproducibilityEvaluator,
+    ) -> Self {
         Self {
+            cache,
             provenance,
             reproducibility,
+        }
+    }
+
+    async fn evaluate_two_veracity_factors(&self, crate_info: &CrateInfo) -> anyhow::Result<CrateVeracityLevel> {
+        let has_provenance = self.provenance.evaluate(crate_info).await?;
+        let has_reproduced_build = self.reproducibility.evaluate(crate_info).await?;
+
+        let veracity_level = CrateVeracityLevel::from_booleans(has_provenance, has_reproduced_build);
+        self.cache.save(crate_info, veracity_level.clone())?;
+        Ok(veracity_level)
+    }
+
+    async fn evaluate_missing_veracity_factor(
+        &self,
+        existing_factor: VeracityFactor,
+        crate_info: &CrateInfo,
+    ) -> anyhow::Result<CrateVeracityLevel> {
+        let found_additional_factor = match existing_factor {
+            VeracityFactor::ReproducibleBuilds => self.provenance.evaluate(crate_info).await?,
+            VeracityFactor::ProvenanceAttested => self.reproducibility.evaluate(crate_info).await?,
+        };
+
+        let new_veracity_level = match found_additional_factor {
+            true => {
+                self.cache.save(crate_info, CrateVeracityLevel::TwoFactors)?;
+                CrateVeracityLevel::TwoFactors
+            },
+            false => CrateVeracityLevel::SingleFactor(existing_factor),
+        };
+
+        Ok(new_veracity_level)
+    }
+}
+
+impl CrateVeracityEvaluation for CombinedVeracityEvaluator {
+    async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<CrateVeracityLevel> {
+        let cached_veracity = self.cache.read(crate_info).unwrap_or(CrateVeracityLevel::NotAvailable);
+
+        match cached_veracity {
+            CrateVeracityLevel::NotAvailable => self.evaluate_two_veracity_factors(crate_info).await,
+            CrateVeracityLevel::SingleFactor(factor) => self.evaluate_missing_veracity_factor(factor, crate_info).await,
+            CrateVeracityLevel::TwoFactors => Ok(cached_veracity),
         }
     }
 }
 
 pub mod factory {
-    use crate::core::CrateVeracityEvaluator;
-    use crate::infra::{CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator};
+    use crate::core::CombinedVeracityEvaluator;
+    use crate::infra::{CachedVeracityEvaluator, CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator};
 
     pub fn create_veracity_evaluator(
+        cached_factory: fn() -> CachedVeracityEvaluator,
         provenance_factory: fn() -> CrateProvenanceEvaluator,
         reproducibility_factory: fn() -> CrateBuildReproducibilityEvaluator,
-    ) -> CrateVeracityEvaluator {
-        CrateVeracityEvaluator::new(provenance_factory(), reproducibility_factory())
+    ) -> CombinedVeracityEvaluator {
+        CombinedVeracityEvaluator::new(cached_factory(), provenance_factory(), reproducibility_factory())
     }
 }
