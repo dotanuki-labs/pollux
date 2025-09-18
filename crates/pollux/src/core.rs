@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::infra::{ReproducibleBuildsEvaluator, TrustedPublishingEvaluator};
+use crate::infra::{CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator};
 use std::fmt::Display;
 
 #[derive(Debug, PartialEq)]
@@ -14,6 +14,14 @@ impl CrateInfo {
     pub fn new(name: String, version: String) -> Self {
         Self { name, version }
     }
+
+    #[cfg(test)]
+    pub fn with(name: &str, version: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            version: version.to_string(),
+        }
+    }
 }
 
 impl Display for CrateInfo {
@@ -24,52 +32,60 @@ impl Display for CrateInfo {
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq)]
-pub enum VerificationKind {
-    ReproducedBuild,
-    UsesTrustedPublishing,
+pub enum VeracityFactor {
+    ReproducibleBuilds,
+    ProvenanceAttested,
 }
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq)]
-pub enum TruthfulnessVerification {
+pub enum CrateVeracityLevel {
     NotAvailable,
-    Partial(VerificationKind),
-    Total,
+    SingleFactor(VeracityFactor),
+    TwoFactors,
 }
 
 #[allow(dead_code)]
-pub trait TruthfulnessEvaluation {
+pub trait VeracityEvaluation {
     async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool>;
 }
 
-pub struct TruthfulnessEvaluator {
-    trusted_publishing_evaluator: TrustedPublishingEvaluator,
-    reproducible_builds_evaluator: ReproducibleBuildsEvaluator,
+pub struct CrateVeracityEvaluator {
+    provenance: CrateProvenanceEvaluator,
+    reproducibility: CrateBuildReproducibilityEvaluator,
 }
 
-#[allow(dead_code)]
-impl TruthfulnessEvaluator {
-    pub fn new(
-        trusted_publishing_evaluator: TrustedPublishingEvaluator,
-        reproducible_builds_evaluator: ReproducibleBuildsEvaluator,
-    ) -> Self {
-        Self {
-            trusted_publishing_evaluator,
-            reproducible_builds_evaluator,
-        }
-    }
-
-    pub async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<TruthfulnessVerification> {
-        let uses_trusted_publishing = self.trusted_publishing_evaluator.evaluate(crate_info).await?;
-        let has_reproduced_build = self.reproducible_builds_evaluator.evaluate(crate_info).await?;
+impl CrateVeracityEvaluator {
+    pub async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<CrateVeracityLevel> {
+        let uses_trusted_publishing = self.provenance.evaluate(crate_info).await?;
+        let has_reproduced_build = self.reproducibility.evaluate(crate_info).await?;
 
         let verification = match (uses_trusted_publishing, has_reproduced_build) {
-            (true, true) => TruthfulnessVerification::Total,
-            (false, true) => TruthfulnessVerification::Partial(VerificationKind::ReproducedBuild),
-            (true, false) => TruthfulnessVerification::Partial(VerificationKind::UsesTrustedPublishing),
-            (false, false) => TruthfulnessVerification::NotAvailable,
+            (true, true) => CrateVeracityLevel::TwoFactors,
+            (false, true) => CrateVeracityLevel::SingleFactor(VeracityFactor::ReproducibleBuilds),
+            (true, false) => CrateVeracityLevel::SingleFactor(VeracityFactor::ProvenanceAttested),
+            (false, false) => CrateVeracityLevel::NotAvailable,
         };
 
         Ok(verification)
+    }
+
+    fn new(provenance: CrateProvenanceEvaluator, reproducibility: CrateBuildReproducibilityEvaluator) -> Self {
+        Self {
+            provenance,
+            reproducibility,
+        }
+    }
+}
+
+pub mod factory {
+    use crate::core::CrateVeracityEvaluator;
+    use crate::infra::{CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator};
+
+    pub fn create_veracity_evaluator(
+        provenance_factory: fn() -> CrateProvenanceEvaluator,
+        reproducibility_factory: fn() -> CrateBuildReproducibilityEvaluator,
+    ) -> CrateVeracityEvaluator {
+        CrateVeracityEvaluator::new(provenance_factory(), reproducibility_factory())
     }
 }

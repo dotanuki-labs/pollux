@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::{CrateInfo, TruthfulnessEvaluation};
+use crate::core::{CrateInfo, VeracityEvaluation};
 use crate::infra::HTTPClient;
 use anyhow::bail;
 use reqwest::StatusCode;
@@ -18,7 +18,7 @@ impl OssRebuildEvaluator {
     }
 }
 
-impl TruthfulnessEvaluation for OssRebuildEvaluator {
+impl VeracityEvaluation for OssRebuildEvaluator {
     async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool> {
         let endpoint = format!(
             "{}/{}/{}/{}-{}.crate/rebuild.intoto.jsonl",
@@ -46,7 +46,7 @@ impl TruthfulnessEvaluation for OssRebuildEvaluator {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{CrateInfo, TruthfulnessEvaluation};
+    use crate::core::{CrateInfo, VeracityEvaluation};
     use crate::infra::factories;
     use crate::infra::ossrebuild::OssRebuildEvaluator;
     use assertor::{BooleanAssertion, ResultAssertion};
