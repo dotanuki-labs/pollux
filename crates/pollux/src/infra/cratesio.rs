@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::{CrateInfo, VeracityEvaluation};
+use crate::core::{CargoPackage, VeracityEvaluation};
 use crate::infra::HTTPClient;
 use serde::Deserialize;
 use std::fmt::Display;
@@ -45,7 +45,7 @@ impl CratesIOEvaluator {
 }
 
 impl VeracityEvaluation for CratesIOEvaluator {
-    async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool> {
+    async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
         let endpoint = format!(
             "{}/api/v1/crates/{}/{}",
             self.base_url, crate_info.name, crate_info.version
@@ -76,7 +76,7 @@ impl VeracityEvaluation for CratesIOEvaluator {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{CrateInfo, VeracityEvaluation};
+    use crate::core::{CargoPackage, VeracityEvaluation};
     use crate::infra::cratesio::CratesIOEvaluator;
     use crate::infra::factories;
     use assertor::{BooleanAssertion, ResultAssertion};
@@ -154,7 +154,7 @@ mod tests {
     async fn should_evaluate_crate_provenance_when_available() {
         let crate_name = "bon";
         let crate_version = "3.7.2";
-        let crate_info = CrateInfo::with(crate_name, crate_version);
+        let crate_info = CargoPackage::with(crate_name, crate_version);
 
         let mock_server = MockServer::start();
         let evaluator = CratesIOEvaluator::new(mock_server.base_url(), factories::HTTP_CLIENT.clone());
@@ -172,7 +172,7 @@ mod tests {
     async fn should_evaluate_crate_provenance_when_not_available() {
         let crate_name = "canopus";
         let crate_version = "0.1.1";
-        let crate_info = CrateInfo::with(crate_name, crate_version);
+        let crate_info = CargoPackage::with(crate_name, crate_version);
 
         let mock_server = MockServer::start();
         let evaluator = CratesIOEvaluator::new(mock_server.base_url(), factories::HTTP_CLIENT.clone());
@@ -191,7 +191,7 @@ mod tests {
     async fn should_evaluate_provenance_when_server_not_available() {
         let crate_name = "canopus";
         let crate_version = "0.0.1";
-        let crate_info = CrateInfo::with(crate_name, crate_version);
+        let crate_info = CargoPackage::with(crate_name, crate_version);
 
         let mock_server = MockServer::start();
         let evaluator = CratesIOEvaluator::new(mock_server.base_url(), factories::HTTP_CLIENT.clone());

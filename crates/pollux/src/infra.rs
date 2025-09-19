@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 mod caching;
+pub mod cargo;
 mod cratesio;
 mod ossrebuild;
 
-use crate::core::{CrateInfo, CrateVeracityLevel, VeracityEvaluation};
+use crate::core::{CargoPackage, CrateVeracityLevel, VeracityEvaluation};
 use crate::infra::caching::DirectoryBased;
 use crate::infra::cratesio::CratesIOEvaluator;
 use crate::infra::ossrebuild::OssRebuildEvaluator;
@@ -23,7 +24,7 @@ pub enum CrateProvenanceEvaluator {
 }
 
 impl VeracityEvaluation for CrateProvenanceEvaluator {
-    async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool> {
+    async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
         match self {
             CrateProvenanceEvaluator::CratesOfficialRegistry(delegate) => delegate.evaluate(crate_info).await,
             #[cfg(test)]
@@ -39,7 +40,7 @@ pub enum CrateBuildReproducibilityEvaluator {
 }
 
 impl VeracityEvaluation for CrateBuildReproducibilityEvaluator {
-    async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool> {
+    async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
         match self {
             CrateBuildReproducibilityEvaluator::GoogleOssRebuild(delegate) => delegate.evaluate(crate_info).await,
             #[cfg(test)]
@@ -55,12 +56,12 @@ pub enum CachedVeracityEvaluator {
 }
 
 pub trait VeracityEvaluationStorage {
-    fn read(&self, crate_info: &CrateInfo) -> anyhow::Result<CrateVeracityLevel>;
-    fn save(&self, crate_info: &CrateInfo, veracity_level: CrateVeracityLevel) -> anyhow::Result<()>;
+    fn read(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel>;
+    fn save(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()>;
 }
 
 impl VeracityEvaluationStorage for CachedVeracityEvaluator {
-    fn read(&self, crate_info: &CrateInfo) -> anyhow::Result<CrateVeracityLevel> {
+    fn read(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
         match self {
             CachedVeracityEvaluator::FileSystem(delegate) => delegate.read(crate_info),
             #[cfg(test)]
@@ -71,7 +72,7 @@ impl VeracityEvaluationStorage for CachedVeracityEvaluator {
         }
     }
 
-    fn save(&self, crate_info: &CrateInfo, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
+    fn save(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
         match self {
             CachedVeracityEvaluator::FileSystem(delegate) => delegate.save(crate_info, veracity_level),
             #[cfg(test)]
@@ -130,11 +131,11 @@ pub mod factories {
 }
 
 #[cfg(test)]
-pub struct FakeVeracityEvaluator(pub Vec<CrateInfo>);
+pub struct FakeVeracityEvaluator(pub Vec<CargoPackage>);
 
 #[cfg(test)]
 impl VeracityEvaluation for FakeVeracityEvaluator {
-    async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool> {
+    async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
         Ok(self.0.contains(crate_info))
     }
 }

@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::{CrateInfo, VeracityEvaluation};
+use crate::core::{CargoPackage, VeracityEvaluation};
 use crate::infra::HTTPClient;
 use anyhow::bail;
 use reqwest::StatusCode;
@@ -19,7 +19,7 @@ impl OssRebuildEvaluator {
 }
 
 impl VeracityEvaluation for OssRebuildEvaluator {
-    async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool> {
+    async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
         let endpoint = format!(
             "{}/{}/{}/{}-{}.crate/rebuild.intoto.jsonl",
             self.base_url, crate_info.name, crate_info.version, crate_info.name, crate_info.version
@@ -46,7 +46,7 @@ impl VeracityEvaluation for OssRebuildEvaluator {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{CrateInfo, VeracityEvaluation};
+    use crate::core::{CargoPackage, VeracityEvaluation};
     use crate::infra::factories;
     use crate::infra::ossrebuild::OssRebuildEvaluator;
     use assertor::{BooleanAssertion, ResultAssertion};
@@ -60,7 +60,7 @@ mod tests {
         let name = "castaway";
         let version = "0.2.2";
 
-        let crate_info = CrateInfo::new(name.to_string(), version.to_string());
+        let crate_info = CargoPackage::new(name.to_string(), version.to_string());
         let endpoint = format!("/{}/{}/{}-{}.crate/rebuild.intoto.jsonl", name, version, name, version);
 
         let mocked = mock_server.mock(|when, then| {
@@ -83,7 +83,7 @@ mod tests {
         let name = "castaway";
         let version = "0.1.0";
 
-        let crate_info = CrateInfo::new(name.to_string(), version.to_string());
+        let crate_info = CargoPackage::new(name.to_string(), version.to_string());
 
         let endpoint = format!("/{}/{}/{}-{}.crate/rebuild.intoto.jsonl", name, version, name, version);
 
@@ -109,7 +109,7 @@ mod tests {
         let name = "castaway";
         let version = "0.2.4";
 
-        let crate_info = CrateInfo::new(name.to_string(), version.to_string());
+        let crate_info = CargoPackage::new(name.to_string(), version.to_string());
 
         let endpoint = format!("/{}/{}/{}-{}.crate/rebuild.intoto.jsonl", name, version, name, version);
 

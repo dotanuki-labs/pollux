@@ -7,12 +7,12 @@ use crate::infra::{
 use std::fmt::Display;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct CrateInfo {
+pub struct CargoPackage {
     pub name: String,
     pub version: String,
 }
 
-impl CrateInfo {
+impl CargoPackage {
     pub fn new(name: String, version: String) -> Self {
         Self { name, version }
     }
@@ -26,7 +26,7 @@ impl CrateInfo {
     }
 }
 
-impl Display for CrateInfo {
+impl Display for CargoPackage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("pkg:cargo/{}@{}", self.name, self.version))
     }
@@ -68,11 +68,11 @@ impl CrateVeracityLevel {
 }
 
 pub trait VeracityEvaluation {
-    async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool>;
+    async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool>;
 }
 
 pub trait CrateVeracityEvaluation {
-    async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<CrateVeracityLevel>;
+    async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel>;
 }
 
 pub struct CombinedVeracityEvaluator {
@@ -94,7 +94,7 @@ impl CombinedVeracityEvaluator {
         }
     }
 
-    async fn evaluate_two_veracity_factors(&self, crate_info: &CrateInfo) -> anyhow::Result<CrateVeracityLevel> {
+    async fn evaluate_two_veracity_factors(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
         let has_provenance = self.provenance.evaluate(crate_info).await?;
         let has_reproduced_build = self.reproducibility.evaluate(crate_info).await?;
 
@@ -106,7 +106,7 @@ impl CombinedVeracityEvaluator {
     async fn evaluate_missing_veracity_factor(
         &self,
         existing_factor: VeracityFactor,
-        crate_info: &CrateInfo,
+        crate_info: &CargoPackage,
     ) -> anyhow::Result<CrateVeracityLevel> {
         let found_additional_factor = match existing_factor {
             VeracityFactor::ReproducibleBuilds => self.provenance.evaluate(crate_info).await?,
@@ -126,7 +126,7 @@ impl CombinedVeracityEvaluator {
 }
 
 impl CrateVeracityEvaluation for CombinedVeracityEvaluator {
-    async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<CrateVeracityLevel> {
+    async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
         let cached_veracity = self.cache.read(crate_info).unwrap_or(CrateVeracityLevel::NotAvailable);
 
         match cached_veracity {
@@ -153,7 +153,7 @@ pub mod factory {
 #[cfg(test)]
 mod tests {
     use crate::core::{
-        CombinedVeracityEvaluator, CrateInfo, CrateVeracityEvaluation, CrateVeracityLevel, VeracityFactor,
+        CargoPackage, CombinedVeracityEvaluator, CrateVeracityEvaluation, CrateVeracityLevel, VeracityFactor,
     };
     use crate::infra::{
         CachedVeracityEvaluator, CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator, FakeVeracityEvaluator,
@@ -172,7 +172,7 @@ mod tests {
 
     fn fake_results_storage(scenario: &CrateScenario) -> HashMap<String, CrateVeracityLevel> {
         if scenario.cached_results {
-            let cache_key = CrateInfo::with(scenario.name, scenario.version).to_string();
+            let cache_key = CargoPackage::with(scenario.name, scenario.version).to_string();
             let veracity_level = CrateVeracityLevel::from_booleans(scenario.provenance, scenario.reproducible);
             HashMap::from([(cache_key, veracity_level)])
         } else {
@@ -182,7 +182,7 @@ mod tests {
 
     fn fake_provenance_evaluator(scenario: &CrateScenario) -> FakeVeracityEvaluator {
         if scenario.provenance {
-            let info = CrateInfo::with(scenario.name, scenario.version);
+            let info = CargoPackage::with(scenario.name, scenario.version);
             FakeVeracityEvaluator(vec![info])
         } else {
             FakeVeracityEvaluator(vec![])
@@ -191,7 +191,7 @@ mod tests {
 
     fn fake_reproducibility_evaluator(scenario: &CrateScenario) -> FakeVeracityEvaluator {
         if scenario.reproducible {
-            let info = CrateInfo::with(scenario.name, scenario.version);
+            let info = CargoPackage::with(scenario.name, scenario.version);
             FakeVeracityEvaluator(vec![info])
         } else {
             FakeVeracityEvaluator(vec![])
@@ -236,7 +236,7 @@ mod tests {
         ];
 
         for scenario in scenarios {
-            let crate_info = CrateInfo::with(scenario.name, scenario.version);
+            let crate_info = CargoPackage::with(scenario.name, scenario.version);
             let previous_veracity_level = CrateVeracityLevel::from_booleans(scenario.provenance, scenario.reproducible);
 
             let veracity_evaluator = CombinedVeracityEvaluator::new(
