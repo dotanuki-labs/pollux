@@ -4,10 +4,12 @@
 mod core;
 mod infra;
 
-use crate::core::CrateInfo;
+use crate::core::CargoPackage;
 use crate::core::CrateVeracityEvaluation;
+use crate::infra::cargo::RustProjectDependenciesResolver;
 use clap::Parser;
 use console::style;
+use std::path::PathBuf;
 use tikv_jemallocator::Jemalloc;
 
 #[global_allocator]
@@ -18,10 +20,13 @@ static GLOBAL: Jemalloc = Jemalloc;
 struct ProgramArguments {
     #[arg(short, long)]
     name: String,
+
+    #[arg(short, long, help = "Path pointing to project root")]
+    pub path: PathBuf,
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     better_panic::install();
     human_panic::setup_panic!();
 
@@ -41,10 +46,20 @@ async fn main() {
         infra::factories::reproducibility_evaluator,
     );
 
+    let dependencies_resolver = RustProjectDependenciesResolver::new(arguments.path);
+
+    let cargo_packages = dependencies_resolver.resolve_packages()?;
+
+    println!();
+    println!("Total cargo packages for this project: {}", cargo_packages.len());
+
     let parts = arguments.name.split("@").collect::<Vec<_>>();
-    let crates_info = CrateInfo::new(parts[0].to_string(), parts[1].to_string());
+    let crates_info = CargoPackage::new(parts[0].to_string(), parts[1].to_string());
 
     let evaluation = veracity_evaluator.evaluate(&crates_info).await.unwrap();
 
+    println!();
     println!("For {} : truthfulness = {:?} ", crates_info, style(evaluation).cyan());
+    println!();
+    Ok(())
 }

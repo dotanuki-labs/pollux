@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::{CrateInfo, CrateVeracityLevel};
+use crate::core::{CargoPackage, CrateVeracityLevel};
 use crate::infra::VeracityEvaluationStorage;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -24,7 +24,7 @@ impl DirectoryBased {
         Self { cache_dir }
     }
 
-    fn data_dir(&self, crate_info: &CrateInfo) -> PathBuf {
+    fn data_dir(&self, crate_info: &CargoPackage) -> PathBuf {
         self.cache_dir
             .join("cache")
             .join(&crate_info.name)
@@ -33,7 +33,7 @@ impl DirectoryBased {
 }
 
 impl VeracityEvaluationStorage for DirectoryBased {
-    fn read(&self, crate_info: &CrateInfo) -> anyhow::Result<CrateVeracityLevel> {
+    fn read(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
         let destination_dir = self.data_dir(crate_info);
         let cache_file = destination_dir.join(VERACITY_FILE_NAME);
 
@@ -49,7 +49,7 @@ impl VeracityEvaluationStorage for DirectoryBased {
         Ok(veracity_level)
     }
 
-    fn save(&self, crate_info: &CrateInfo, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
+    fn save(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
         let destination_dir = self.data_dir(crate_info);
         let cache_file = destination_dir.join(VERACITY_FILE_NAME);
 
