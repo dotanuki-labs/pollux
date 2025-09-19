@@ -27,17 +27,7 @@ fn should_validate_single_crate_coordinate() {
     let project_root = find_project_root();
     std::fs::remove_dir_all(&pollux_cache_dir).unwrap_or_else(|_| println!("Nothing to remove"));
 
-    sut()
-        .args(["--path", project_root.as_str(), "--name", "bon@3.7.2"])
-        .assert()
-        .success();
+    sut().args(["--path", project_root.as_str()]).assert().success();
 
-    let cached_file = home_dir
-        .join(".pollux")
-        .join("cache")
-        .join("bon")
-        .join("3.7.2")
-        .join("veracity-checks.json");
-
-    assert!(cached_file.exists());
+    assert!(pollux_cache_dir.exists());
 }

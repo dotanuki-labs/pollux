@@ -1,10 +1,13 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
+use crate::core::CrateVeracityLevel::NotAvailable;
 use crate::infra::{
     CachedVeracityEvaluator, CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator, VeracityEvaluationStorage,
 };
 use std::fmt::Display;
+use std::time::Duration;
+use tokio::time::sleep;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CargoPackage {
@@ -95,8 +98,8 @@ impl CombinedVeracityEvaluator {
     }
 
     async fn evaluate_two_veracity_factors(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
-        let has_provenance = self.provenance.evaluate(crate_info).await?;
         let has_reproduced_build = self.reproducibility.evaluate(crate_info).await?;
+        let has_provenance = self.provenance.evaluate(crate_info).await?;
 
         let veracity_level = CrateVeracityLevel::from_booleans(has_provenance, has_reproduced_build);
         self.cache.save(crate_info, veracity_level.clone())?;
@@ -108,6 +111,8 @@ impl CombinedVeracityEvaluator {
         existing_factor: VeracityFactor,
         crate_info: &CargoPackage,
     ) -> anyhow::Result<CrateVeracityLevel> {
+        sleep(Duration::from_millis(1000)).await;
+
         let found_additional_factor = match existing_factor {
             VeracityFactor::ReproducibleBuilds => self.provenance.evaluate(crate_info).await?,
             VeracityFactor::ProvenanceAttested => self.reproducibility.evaluate(crate_info).await?,
@@ -126,14 +131,29 @@ impl CombinedVeracityEvaluator {
 }
 
 impl CrateVeracityEvaluation for CombinedVeracityEvaluator {
-    async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
-        let cached_veracity = self.cache.read(crate_info).unwrap_or(CrateVeracityLevel::NotAvailable);
+    async fn evaluate(&self, cargo_package: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
+        let cached_veracity = self.cache.read(cargo_package).unwrap_or(NotAvailable);
 
-        match cached_veracity {
-            CrateVeracityLevel::NotAvailable => self.evaluate_two_veracity_factors(crate_info).await,
-            CrateVeracityLevel::SingleFactor(factor) => self.evaluate_missing_veracity_factor(factor, crate_info).await,
-            CrateVeracityLevel::TwoFactors => Ok(cached_veracity),
+        let new_evaluation = match &cached_veracity {
+            CrateVeracityLevel::NotAvailable => self.evaluate_two_veracity_factors(cargo_package).await,
+            CrateVeracityLevel::SingleFactor(factor) => {
+                self.evaluate_missing_veracity_factor(factor.clone(), cargo_package)
+                    .await
+            },
+            CrateVeracityLevel::TwoFactors => Ok(cached_veracity.clone()),
+        };
+
+        if new_evaluation.is_ok() {
+            return new_evaluation;
         }
+
+        log::info!(
+            "[pollux.core] failed to evaluate {} | reason = {}; defaulting to cache",
+            cargo_package,
+            new_evaluation.unwrap_err()
+        );
+        log::info!("[pollux.core] using cached veracity evaluation for {}", cargo_package);
+        Ok(cached_veracity)
     }
 }
 
