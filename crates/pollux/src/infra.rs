@@ -92,6 +92,7 @@ pub mod factories {
     };
     use reqwest::header;
     use std::env::home_dir;
+    use std::path::PathBuf;
     use std::sync::{Arc, LazyLock};
 
     pub static HTTP_CLIENT: LazyLock<Arc<HTTPClient>> = LazyLock::new(|| {
@@ -108,8 +109,12 @@ pub mod factories {
     static OSS_REBUILD_CRATES_IO_URL: &str = "https://storage.googleapis.com/google-rebuild-attestations/cratesio";
 
     pub fn cached_evaluator() -> CachedVeracityEvaluator {
-        let home = home_dir().unwrap().join(".pollux");
-        let delegate = DirectoryBased::new(home);
+        let cache_folder = match home_dir() {
+            None => PathBuf::from("/var/cache"),
+            Some(dir) => dir.join(".pollux"),
+        };
+
+        let delegate = DirectoryBased::new(cache_folder);
         CachedVeracityEvaluator::FileSystem(delegate)
     }
 
