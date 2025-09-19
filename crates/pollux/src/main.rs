@@ -5,6 +5,7 @@ mod core;
 mod infra;
 
 use crate::core::CrateInfo;
+use crate::core::CrateVeracityEvaluation;
 use clap::Parser;
 use console::style;
 use tikv_jemallocator::Jemalloc;
@@ -35,6 +36,7 @@ async fn main() {
     let arguments = ProgramArguments::parse();
 
     let veracity_evaluator = core::factory::create_veracity_evaluator(
+        infra::factories::cached_evaluator,
         infra::factories::provenance_evaluator,
         infra::factories::reproducibility_evaluator,
     );

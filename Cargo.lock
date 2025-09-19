@@ -1659,6 +1659,7 @@ dependencies = [
  "log",
  "reqwest",
  "serde",
+ "serde_json",
  "tikv-jemallocator",
  "tokio",
 ]

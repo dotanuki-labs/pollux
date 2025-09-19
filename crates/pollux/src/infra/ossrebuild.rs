@@ -28,17 +28,17 @@ impl VeracityEvaluation for OssRebuildEvaluator {
         let response = self.http_client.head(&endpoint).send().await?;
 
         if response.status() == StatusCode::OK {
-            log::info!("Found reproduced build for {}", crate_info);
+            log::info!("[pollux.evaluator] found reproduced build for {}", crate_info);
             return Ok(true);
         }
 
         if response.status() == StatusCode::NOT_FOUND {
-            log::info!("Reproduced build not found for {}", crate_info);
+            log::info!("[pollux.evaluator] reproduced build not found for {}", crate_info);
             return Ok(false);
         }
 
         bail!(
-            "cannot fetch information from oss-rebuild : HTTP status = {}",
+            "pollux.evaluator : cannot fetch information from oss-rebuild (HTTP status = {})",
             response.status()
         )
     }

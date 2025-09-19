@@ -61,11 +61,15 @@ impl VeracityEvaluation for CratesIOEvaluator {
             .await?;
 
         if let Some(trustpub_data) = crates_details.version.trustpub_data {
-            log::info!("Found provenance for {} : {}", crate_info, trustpub_data);
+            log::info!(
+                "[pollux.evaluator] found provenance for {} : {}",
+                crate_info,
+                trustpub_data
+            );
             return Ok(true);
         };
 
-        log::info!("Provenance not found for {}", crate_info);
+        log::info!("[pollux.evaluator] provenance not found for {}", crate_info);
         Ok(false)
     }
 }
