@@ -19,7 +19,7 @@ jobs:
           persist-credentials: false
 
       - name: Prepare documentation assets
-        uses: dotanuki-labs/github-actions/foss/prepare-ghpages@a25d200bd37cec3467c6030e63e914fd03e69180
+        uses: dotanuki-labs/github-actions/foss/prepare-ghpages@3ec738285d4743905ec3e2b44e58f2e0901cb945
 
       - name: Deploy assets to GitHub Pages
         id: deployment
