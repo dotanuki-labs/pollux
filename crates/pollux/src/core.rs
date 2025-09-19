@@ -6,7 +6,7 @@ use crate::infra::{
 };
 use std::fmt::Display;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CrateInfo {
     pub name: String,
     pub version: String,
@@ -38,7 +38,6 @@ pub enum VeracityFactor {
     ProvenanceAttested,
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
 pub enum CrateVeracityLevel {
     NotAvailable,
@@ -148,5 +147,118 @@ pub mod factory {
         reproducibility_factory: fn() -> CrateBuildReproducibilityEvaluator,
     ) -> CombinedVeracityEvaluator {
         CombinedVeracityEvaluator::new(cached_factory(), provenance_factory(), reproducibility_factory())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::core::{
+        CombinedVeracityEvaluator, CrateInfo, CrateVeracityEvaluation, CrateVeracityLevel, VeracityFactor,
+    };
+    use crate::infra::{
+        CachedVeracityEvaluator, CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator, FakeVeracityEvaluator,
+    };
+    use assertor::{BooleanAssertion, EqualityAssertion};
+    use std::collections::HashMap;
+
+    struct CrateScenario {
+        name: &'static str,
+        version: &'static str,
+        provenance: bool,
+        reproducible: bool,
+        cached_results: bool,
+        expected: CrateVeracityLevel,
+    }
+
+    fn fake_results_storage(scenario: &CrateScenario) -> HashMap<String, CrateVeracityLevel> {
+        if scenario.cached_results {
+            let cache_key = CrateInfo::with(scenario.name, scenario.version).to_string();
+            let veracity_level = CrateVeracityLevel::from_booleans(scenario.provenance, scenario.reproducible);
+            HashMap::from([(cache_key, veracity_level)])
+        } else {
+            HashMap::new()
+        }
+    }
+
+    fn fake_provenance_evaluator(scenario: &CrateScenario) -> FakeVeracityEvaluator {
+        if scenario.provenance {
+            let info = CrateInfo::with(scenario.name, scenario.version);
+            FakeVeracityEvaluator(vec![info])
+        } else {
+            FakeVeracityEvaluator(vec![])
+        }
+    }
+
+    fn fake_reproducibility_evaluator(scenario: &CrateScenario) -> FakeVeracityEvaluator {
+        if scenario.reproducible {
+            let info = CrateInfo::with(scenario.name, scenario.version);
+            FakeVeracityEvaluator(vec![info])
+        } else {
+            FakeVeracityEvaluator(vec![])
+        }
+    }
+
+    #[tokio::test]
+    async fn test_veracity_evaluator_scenarios() {
+        let scenarios = vec![
+            CrateScenario {
+                name: "canopus",
+                version: "0.1.1",
+                provenance: false,
+                reproducible: false,
+                cached_results: false,
+                expected: CrateVeracityLevel::NotAvailable,
+            },
+            CrateScenario {
+                name: "castaway",
+                version: "0.2.2",
+                provenance: false,
+                reproducible: true,
+                cached_results: false,
+                expected: CrateVeracityLevel::SingleFactor(VeracityFactor::ReproducibleBuilds),
+            },
+            CrateScenario {
+                name: "castaway",
+                version: "0.2.4",
+                provenance: false,
+                reproducible: false,
+                cached_results: true,
+                expected: CrateVeracityLevel::NotAvailable,
+            },
+            CrateScenario {
+                name: "bon",
+                version: "3.7.2",
+                provenance: true,
+                reproducible: false,
+                cached_results: true,
+                expected: CrateVeracityLevel::SingleFactor(VeracityFactor::ProvenanceAttested),
+            },
+        ];
+
+        for scenario in scenarios {
+            let crate_info = CrateInfo::with(scenario.name, scenario.version);
+            let previous_veracity_level = CrateVeracityLevel::from_booleans(scenario.provenance, scenario.reproducible);
+
+            let veracity_evaluator = CombinedVeracityEvaluator::new(
+                CachedVeracityEvaluator::FakeCache(fake_results_storage(&scenario)),
+                CrateProvenanceEvaluator::FakeRegistry(fake_provenance_evaluator(&scenario)),
+                CrateBuildReproducibilityEvaluator::FakeRebuilder(fake_reproducibility_evaluator(&scenario)),
+            );
+
+            let evaluation = veracity_evaluator.evaluate(&crate_info).await.unwrap();
+
+            assertor::assert_that!(evaluation).is_equal_to(scenario.expected);
+
+            if previous_veracity_level == CrateVeracityLevel::NotAvailable
+                && evaluation != CrateVeracityLevel::NotAvailable
+            {
+                match veracity_evaluator.cache {
+                    CachedVeracityEvaluator::FakeCache(entries) => {
+                        assertor::assert_that!(entries.contains_key(scenario.name)).is_true()
+                    },
+                    _ => panic!("Not allowed on this test"),
+                }
+            }
+        }
     }
 }

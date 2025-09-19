@@ -16,7 +16,6 @@ use std::collections::HashMap;
 
 pub type HTTPClient = Client;
 
-#[allow(dead_code)]
 pub enum CrateProvenanceEvaluator {
     CratesOfficialRegistry(CratesIOEvaluator),
     #[cfg(test)]
@@ -33,14 +32,12 @@ impl VeracityEvaluation for CrateProvenanceEvaluator {
     }
 }
 
-#[allow(dead_code)]
 pub enum CrateBuildReproducibilityEvaluator {
     GoogleOssRebuild(OssRebuildEvaluator),
     #[cfg(test)]
     FakeRebuilder(FakeVeracityEvaluator),
 }
 
-#[allow(unused_variables)]
 impl VeracityEvaluation for CrateBuildReproducibilityEvaluator {
     async fn evaluate(&self, crate_info: &CrateInfo) -> anyhow::Result<bool> {
         match self {
@@ -53,9 +50,8 @@ impl VeracityEvaluation for CrateBuildReproducibilityEvaluator {
 
 pub enum CachedVeracityEvaluator {
     FileSystem(DirectoryBased),
-    #[allow(dead_code)]
     #[cfg(test)]
-    FakeCaching(HashMap<String, CrateVeracityLevel>),
+    FakeCache(HashMap<String, CrateVeracityLevel>),
 }
 
 pub trait VeracityEvaluationStorage {
@@ -68,7 +64,10 @@ impl VeracityEvaluationStorage for CachedVeracityEvaluator {
         match self {
             CachedVeracityEvaluator::FileSystem(delegate) => delegate.read(crate_info),
             #[cfg(test)]
-            CachedVeracityEvaluator::FakeCaching(fakes) => Ok(fakes.get(&crate_info.name).cloned().unwrap()),
+            CachedVeracityEvaluator::FakeCache(fakes) => Ok(fakes
+                .get(&crate_info.name)
+                .cloned()
+                .unwrap_or(CrateVeracityLevel::NotAvailable)),
         }
     }
 
@@ -76,7 +75,7 @@ impl VeracityEvaluationStorage for CachedVeracityEvaluator {
         match self {
             CachedVeracityEvaluator::FileSystem(delegate) => delegate.save(crate_info, veracity_level),
             #[cfg(test)]
-            CachedVeracityEvaluator::FakeCaching(fakes) => {
+            CachedVeracityEvaluator::FakeCache(fakes) => {
                 fakes.to_owned().insert(crate_info.name.clone(), veracity_level);
                 Ok(())
             },
@@ -126,7 +125,7 @@ pub mod factories {
 }
 
 #[cfg(test)]
-pub struct FakeVeracityEvaluator(Vec<CrateInfo>);
+pub struct FakeVeracityEvaluator(pub Vec<CrateInfo>);
 
 #[cfg(test)]
 impl VeracityEvaluation for FakeVeracityEvaluator {

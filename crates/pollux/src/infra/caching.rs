@@ -6,7 +6,7 @@ use crate::infra::VeracityEvaluationStorage;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-static VERACITY_FILE: &str = "veracity-checks.json";
+static VERACITY_FILE_NAME: &str = "veracity-checks.json";
 
 #[derive(Debug, Serialize, Deserialize)]
 struct CachedVeracityInfo {
@@ -35,13 +35,15 @@ impl DirectoryBased {
 impl VeracityEvaluationStorage for DirectoryBased {
     fn read(&self, crate_info: &CrateInfo) -> anyhow::Result<CrateVeracityLevel> {
         let destination_dir = self.data_dir(crate_info);
+        let cache_file = destination_dir.join(VERACITY_FILE_NAME);
 
-        if !destination_dir.exists() {
+        if !cache_file.exists() {
             log::info!("[pollux.cache] {:?} not found", destination_dir);
             return Ok(CrateVeracityLevel::NotAvailable);
         }
 
-        let serialized = std::fs::read(destination_dir.join(VERACITY_FILE))?;
+        log::info!("[pollux.cache] cache hit at {:?} created", cache_file);
+        let serialized = std::fs::read(cache_file)?;
         let info: CachedVeracityInfo = serde_json::from_slice(&serialized)?;
         let veracity_level = CrateVeracityLevel::from_booleans(info.provenance, info.reproducibility);
         Ok(veracity_level)
@@ -49,6 +51,7 @@ impl VeracityEvaluationStorage for DirectoryBased {
 
     fn save(&self, crate_info: &CrateInfo, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
         let destination_dir = self.data_dir(crate_info);
+        let cache_file = destination_dir.join(VERACITY_FILE_NAME);
 
         if !destination_dir.exists() {
             std::fs::create_dir_all(&destination_dir).expect("cannot create cache at $HOME");
@@ -64,8 +67,7 @@ impl VeracityEvaluationStorage for DirectoryBased {
         };
 
         let serialized = serde_json::to_vec(&cached_veracity)?;
-        let cache_file = destination_dir.join(VERACITY_FILE);
-        std::fs::write(destination_dir.join(VERACITY_FILE), serialized)?;
+        std::fs::write(destination_dir.join(VERACITY_FILE_NAME), serialized)?;
         log::info!("[pollux.cache] {:?} saved", cache_file);
         Ok(())
     }
