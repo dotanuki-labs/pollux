@@ -31,4 +31,5 @@ tokio.workspace = true
 assertor.workspace = true
 assert_cmd.workspace = true
 httpmock.workspace = true
+predicates.workspace = true
 temp-dir.workspace = true
