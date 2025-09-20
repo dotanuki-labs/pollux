@@ -6,6 +6,8 @@ use crate::infra::HTTPClient;
 use serde::Deserialize;
 use std::fmt::Display;
 use std::sync::Arc;
+use std::time::Duration;
+use tokio::time::sleep;
 
 #[derive(Debug, Deserialize)]
 struct TrustPubData {
@@ -46,6 +48,8 @@ impl CratesIOEvaluator {
 
 impl VeracityEvaluation for CratesIOEvaluator {
     async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
+        sleep(Duration::from_millis(1000)).await;
+
         let endpoint = format!(
             "{}/api/v1/crates/{}/{}",
             self.base_url, crate_info.name, crate_info.version

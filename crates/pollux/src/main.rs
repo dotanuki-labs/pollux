@@ -4,8 +4,8 @@
 mod core;
 mod infra;
 
-use crate::core::CargoPackage;
 use crate::core::CrateVeracityEvaluation;
+use crate::core::CrateVeracityLevel;
 use crate::infra::cargo::RustProjectDependenciesResolver;
 use clap::Parser;
 use console::style;
@@ -18,14 +18,12 @@ static GLOBAL: Jemalloc = Jemalloc;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct ProgramArguments {
-    #[arg(short, long)]
-    name: String,
-
     #[arg(short, long, help = "Path pointing to project root")]
     pub path: PathBuf,
 }
 
 #[tokio::main]
+
 async fn main() -> anyhow::Result<()> {
     better_panic::install();
     human_panic::setup_panic!();
@@ -49,17 +47,62 @@ async fn main() -> anyhow::Result<()> {
     let dependencies_resolver = RustProjectDependenciesResolver::new(arguments.path);
 
     let cargo_packages = dependencies_resolver.resolve_packages()?;
+    let total_project_packages = cargo_packages.len();
 
     println!();
-    println!("Total cargo packages for this project: {}", cargo_packages.len());
+    println!("Total cargo packages for this project: {}", total_project_packages);
+    println!();
+    println!("Evaluating veracity for packages. This operation may take some time ...");
 
-    let parts = arguments.name.split("@").collect::<Vec<_>>();
-    let crates_info = CargoPackage::new(parts[0].to_string(), parts[1].to_string());
+    let veracity_checks = cargo_packages
+        .into_iter()
+        .map(async |package| (package.clone(), veracity_evaluator.evaluate(&package).await))
+        .collect::<Vec<_>>();
 
-    let evaluation = veracity_evaluator.evaluate(&crates_info).await.unwrap();
+    let evaluations = futures::future::join_all(veracity_checks).await;
+
+    let total_evaluated_packages = evaluations
+        .iter()
+        .filter(|(_, check)| check.is_ok())
+        .collect::<Vec<_>>()
+        .len();
+
+    let total_packages_with_veracity_level = evaluations
+        .iter()
+        .filter_map(|(_, check)| {
+            if let Ok(level) = check {
+                Some(level.to_owned().clone())
+            } else {
+                None
+            }
+        })
+        .filter(|veracity_level| *veracity_level != CrateVeracityLevel::NotAvailable)
+        .collect::<Vec<_>>()
+        .len();
 
     println!();
-    println!("For {} : truthfulness = {:?} ", crates_info, style(evaluation).cyan());
+    println!("Packages evaluated : {}", total_evaluated_packages);
+    println!(
+        "Packages missing veracity checks : {}",
+        total_project_packages - total_evaluated_packages
+    );
+    println!(
+        "Packages with existing veracity checks : {}",
+        total_packages_with_veracity_level
+    );
+    println!();
+
+    evaluations
+        .iter()
+        .for_each(|(package, veracity_check)| match veracity_check {
+            Ok(level) => {
+                println!("For {} : veracity = {:?} ", package, style(level).cyan());
+            },
+            Err(_) => {
+                println!("For {} : {}", package, style("failed to evaluate").red());
+            },
+        });
+
     println!();
     Ok(())
 }

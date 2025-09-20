@@ -95,6 +95,7 @@ pub mod factories {
     use std::env::home_dir;
     use std::path::PathBuf;
     use std::sync::{Arc, LazyLock};
+    use std::time::Duration;
 
     pub static HTTP_CLIENT: LazyLock<Arc<HTTPClient>> = LazyLock::new(|| {
         let user_agent = format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
@@ -102,7 +103,11 @@ pub mod factories {
         let mut headers = header::HeaderMap::new();
         headers.insert(header::USER_AGENT, header::HeaderValue::from_str(&user_agent).unwrap());
 
-        let client = HTTPClient::builder().default_headers(headers).build().unwrap();
+        let client = HTTPClient::builder()
+            .default_headers(headers)
+            .timeout(Duration::from_secs(15))
+            .build()
+            .unwrap();
         Arc::new(client)
     });
 

@@ -18,6 +18,7 @@ cargo-lock.workspace = true
 clap = { workspace = true, features = ["derive"] }
 console.workspace = true
 env_logger.workspace = true
+futures.workspace = true
 human-panic.workspace = true
 log.workspace = true
 reqwest.workspace = true
@@ -30,4 +31,5 @@ tokio.workspace = true
 assertor.workspace = true
 assert_cmd.workspace = true
 httpmock.workspace = true
+predicates.workspace = true
 temp-dir.workspace = true
