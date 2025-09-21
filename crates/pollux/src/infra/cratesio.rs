@@ -86,8 +86,8 @@ impl VeracityEvaluation for CratesIOEvaluator {
 #[cfg(test)]
 mod tests {
     use crate::core::{CargoPackage, VeracityEvaluation};
-    use crate::infra::HTTP_CLIENT;
     use crate::infra::cratesio::CratesIOEvaluator;
+    use crate::infra::{HTTP_CLIENT, MAX_HTTP_RETRY_ATTEMPTS};
     use assertor::{BooleanAssertion, ResultAssertion};
     use httpmock::{MockServer, Then, When};
 
@@ -210,7 +210,7 @@ mod tests {
 
         let evaluation = evaluator.evaluate(&crate_info).await;
 
-        mocked.assert();
+        mocked.assert_hits(MAX_HTTP_RETRY_ATTEMPTS as usize + 1);
         assertor::assert_that!(evaluation).is_err()
     }
 }

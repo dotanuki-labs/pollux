@@ -10,16 +10,21 @@ use crate::core::{CargoPackage, CrateVeracityLevel, VeracityEvaluation};
 use crate::infra::caching::DirectoryBased;
 use crate::infra::cratesio::CratesIOEvaluator;
 use crate::infra::ossrebuild::OssRebuildEvaluator;
-use reqwest::{Client, header};
+use reqwest::header;
+
+use reqwest_middleware::ClientWithMiddleware;
+use reqwest_retry::RetryTransientMiddleware;
+use reqwest_retry::policies::ExponentialBackoff;
 
 #[cfg(test)]
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
-pub type HTTPClient = Client;
+pub type HTTPClient = ClientWithMiddleware;
 pub static CRATES_IO_API: &str = "https://crates.io";
 pub static OSS_REBUILD_CRATES_IO_URL: &str = "https://storage.googleapis.com/google-rebuild-attestations/cratesio";
+pub static MAX_HTTP_RETRY_ATTEMPTS: u32 = 2;
 
 pub static HTTP_CLIENT: LazyLock<Arc<HTTPClient>> = LazyLock::new(|| {
     let user_agent = format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
@@ -27,12 +32,18 @@ pub static HTTP_CLIENT: LazyLock<Arc<HTTPClient>> = LazyLock::new(|| {
     let mut headers = header::HeaderMap::new();
     headers.insert(header::USER_AGENT, header::HeaderValue::from_str(&user_agent).unwrap());
 
-    let client = HTTPClient::builder()
+    let base_http_client = reqwest::Client::builder()
         .default_headers(headers)
         .timeout(Duration::from_secs(15))
         .build()
         .unwrap();
-    Arc::new(client)
+
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(MAX_HTTP_RETRY_ATTEMPTS);
+
+    let retrier_http_client = reqwest_middleware::ClientBuilder::new(base_http_client)
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build();
+    Arc::new(retrier_http_client)
 });
 
 pub enum CrateProvenanceEvaluator {
