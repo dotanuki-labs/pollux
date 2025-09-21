@@ -43,7 +43,7 @@ fn should_verify_project_from_lockfile() {
         .args(["--path", cargo_project.path().to_str().unwrap()])
         .assert()
         .success()
-        .stdout(contains("Total cargo packages for this project: 3"))
+        .stdout(contains("Packages evaluated : 3"))
         .stdout(contains("For pkg:cargo/arbitrary@1.4.1 : veracity = NotAvailable"))
         .stdout(contains(
             "For pkg:cargo/find-msvc-tools@0.1.1 : veracity = SingleFactor(ProvenanceAttested)",

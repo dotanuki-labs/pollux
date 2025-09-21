@@ -42,7 +42,7 @@ impl VeracityEvaluationStorage for DirectoryBased {
             return Ok(CrateVeracityLevel::NotAvailable);
         }
 
-        log::info!("[pollux.cache] cache hit at {:?} created", cache_file);
+        log::info!("[pollux.cache] cache hit at {:?}", cache_file);
         let serialized = std::fs::read(cache_file)?;
         let info: CachedVeracityInfo = serde_json::from_slice(&serialized)?;
         let veracity_level = CrateVeracityLevel::from_booleans(info.provenance, info.reproducibility);
