@@ -53,7 +53,7 @@ impl VeracityEvaluation for OssRebuildEvaluator {
 #[cfg(test)]
 mod tests {
     use crate::core::{CargoPackage, VeracityEvaluation};
-    use crate::infra::factories;
+    use crate::infra::HTTP_CLIENT;
     use crate::infra::ossrebuild::OssRebuildEvaluator;
     use assertor::{BooleanAssertion, ResultAssertion};
     use httpmock::MockServer;
@@ -61,7 +61,7 @@ mod tests {
     #[tokio::test]
     async fn should_evaluate_rebuild_when_available() {
         let mock_server = MockServer::start();
-        let evaluator = OssRebuildEvaluator::new(mock_server.base_url(), factories::HTTP_CLIENT.clone());
+        let evaluator = OssRebuildEvaluator::new(mock_server.base_url(), HTTP_CLIENT.clone());
 
         let name = "castaway";
         let version = "0.2.2";
@@ -84,7 +84,7 @@ mod tests {
     #[tokio::test]
     async fn should_evaluate_rebuild_when_not_available() {
         let mock_server = MockServer::start();
-        let evaluator = OssRebuildEvaluator::new(mock_server.base_url(), factories::HTTP_CLIENT.clone());
+        let evaluator = OssRebuildEvaluator::new(mock_server.base_url(), HTTP_CLIENT.clone());
 
         let name = "castaway";
         let version = "0.1.0";
@@ -110,7 +110,7 @@ mod tests {
     #[tokio::test]
     async fn should_not_evaluate_rebuild_when_with_different_status_code() {
         let mock_server = MockServer::start();
-        let evaluator = OssRebuildEvaluator::new(mock_server.base_url(), factories::HTTP_CLIENT.clone());
+        let evaluator = OssRebuildEvaluator::new(mock_server.base_url(), HTTP_CLIENT.clone());
 
         let name = "castaway";
         let version = "0.2.4";

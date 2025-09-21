@@ -83,7 +83,7 @@ pub struct CombinedVeracityEvaluator {
 }
 
 impl CombinedVeracityEvaluator {
-    fn new(
+    pub fn new(
         cache: CachedVeracityEvaluator,
         provenance: CrateProvenanceEvaluator,
         reproducibility: CrateBuildReproducibilityEvaluator,
@@ -150,19 +150,6 @@ impl CrateVeracityEvaluation for CombinedVeracityEvaluator {
         );
         log::info!("[pollux.core] using cached veracity evaluation for {}", cargo_package);
         Ok(cached_veracity)
-    }
-}
-
-pub mod factory {
-    use crate::core::CombinedVeracityEvaluator;
-    use crate::infra::{CachedVeracityEvaluator, CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator};
-
-    pub fn create_veracity_evaluator(
-        cached_factory: fn() -> CachedVeracityEvaluator,
-        provenance_factory: fn() -> CrateProvenanceEvaluator,
-        reproducibility_factory: fn() -> CrateBuildReproducibilityEvaluator,
-    ) -> CombinedVeracityEvaluator {
-        CombinedVeracityEvaluator::new(cached_factory(), provenance_factory(), reproducibility_factory())
     }
 }
 

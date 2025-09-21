@@ -3,13 +3,11 @@
 
 mod core;
 mod infra;
+mod ioc;
 mod pollux;
 
-use crate::infra::cargo::RustProjectDependenciesResolver;
-use crate::pollux::{Pollux, PolluxMessage};
 use clap::Parser;
 use console::style;
-use ractor::Actor;
 use std::path::PathBuf;
 use tikv_jemallocator::Jemalloc;
 
@@ -38,34 +36,15 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let arguments = ProgramArguments::parse();
-
-    let veracity_evaluator = core::factory::create_veracity_evaluator(
-        infra::factories::cached_evaluator,
-        infra::factories::provenance_evaluator,
-        infra::factories::reproducibility_evaluator,
-    );
-
-    let dependencies_resolver = RustProjectDependenciesResolver::new(arguments.path);
-
-    let cargo_packages = dependencies_resolver.resolve_packages()?;
-    let total_project_packages = cargo_packages.len();
+    let pollux = ioc::create_pollux(arguments.path);
 
     println!("Evaluating veracity for packages. This operation may take some time ...");
 
-    let pollux = Pollux::new(veracity_evaluator);
-
-    let (actor, _) = Actor::spawn(None, pollux, ()).await?;
-    for package in cargo_packages {
-        actor.cast(PolluxMessage::Evaluate(package))?
-    }
-
-    let timeout = 1100 * 2 * total_project_packages as u64;
-    let results = ractor::call_t!(actor, PolluxMessage::AggregateResults, timeout)?;
-
+    let results = pollux.execute().await?;
     let statistics = results.statistics;
 
     println!();
-    println!("Packages evaluated : {}", total_project_packages);
+    println!("Packages evaluated : {}", statistics.total_project_packages);
     println!("Missing veracity factors : {}", statistics.without_veracity_level);
     println!("With existing factors : {}", statistics.with_veracity_level);
     println!();
