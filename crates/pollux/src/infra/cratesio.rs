@@ -38,17 +38,22 @@ struct DetailsForCrateVersion {
 pub struct CratesIOEvaluator {
     base_url: String,
     http_client: Arc<HTTPClient>,
+    enforced_delay: u64,
 }
 
 impl CratesIOEvaluator {
-    pub fn new(base_url: String, http_client: Arc<HTTPClient>) -> Self {
-        Self { base_url, http_client }
+    pub fn new(base_url: String, http_client: Arc<HTTPClient>, enforced_delay: u64) -> Self {
+        Self {
+            base_url,
+            http_client,
+            enforced_delay,
+        }
     }
 }
 
 impl VeracityEvaluation for CratesIOEvaluator {
     async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
-        sleep(Duration::from_millis(1000)).await;
+        sleep(Duration::from_millis(self.enforced_delay)).await;
 
         let endpoint = format!(
             "{}/api/v1/crates/{}/{}",
@@ -81,8 +86,8 @@ impl VeracityEvaluation for CratesIOEvaluator {
 #[cfg(test)]
 mod tests {
     use crate::core::{CargoPackage, VeracityEvaluation};
+    use crate::infra::HTTP_CLIENT;
     use crate::infra::cratesio::CratesIOEvaluator;
-    use crate::infra::factories;
     use assertor::{BooleanAssertion, ResultAssertion};
     use httpmock::{MockServer, Then, When};
 
@@ -161,7 +166,7 @@ mod tests {
         let crate_info = CargoPackage::with(crate_name, crate_version);
 
         let mock_server = MockServer::start();
-        let evaluator = CratesIOEvaluator::new(mock_server.base_url(), factories::HTTP_CLIENT.clone());
+        let evaluator = CratesIOEvaluator::new(mock_server.base_url(), HTTP_CLIENT.clone(), 10);
 
         let with_provenance = responds_with_existing_provenance(crate_name, crate_version);
         let mocked = mock_server.mock(with_provenance);
@@ -179,7 +184,7 @@ mod tests {
         let crate_info = CargoPackage::with(crate_name, crate_version);
 
         let mock_server = MockServer::start();
-        let evaluator = CratesIOEvaluator::new(mock_server.base_url(), factories::HTTP_CLIENT.clone());
+        let evaluator = CratesIOEvaluator::new(mock_server.base_url(), HTTP_CLIENT.clone(), 10);
 
         let without_provenance = responds_without_provenance(crate_name, crate_version);
 
@@ -198,7 +203,7 @@ mod tests {
         let crate_info = CargoPackage::with(crate_name, crate_version);
 
         let mock_server = MockServer::start();
-        let evaluator = CratesIOEvaluator::new(mock_server.base_url(), factories::HTTP_CLIENT.clone());
+        let evaluator = CratesIOEvaluator::new(mock_server.base_url(), HTTP_CLIENT.clone(), 10);
 
         let not_found = responds_without_server_error(crate_name, crate_version);
         let mocked = mock_server.mock(not_found);

@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 use crate::core::{CargoPackage, CombinedVeracityEvaluator, CrateVeracityEvaluation, CrateVeracityLevel};
+use crate::infra::cargo::RustProjectDependenciesResolver;
+use crate::ioc::CRATESIO_MILLIS_TO_WAIT_AFTER_RATE_LIMITED;
 use ractor::{Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
 
 pub type EvaluationOutcome = (CargoPackage, Option<CrateVeracityLevel>);
 
 pub struct PolluxStatistics {
+    pub total_project_packages: usize,
     pub with_veracity_level: usize,
     pub without_veracity_level: usize,
 }
@@ -22,16 +25,44 @@ pub enum PolluxMessage {
 }
 
 pub struct Pollux {
-    evaluator: CombinedVeracityEvaluator,
+    dependencies_resolver: RustProjectDependenciesResolver,
+    pollux_executor: PolluxExecutor,
 }
 
 impl Pollux {
-    pub fn new(evaluator: CombinedVeracityEvaluator) -> Self {
-        Self { evaluator }
+    pub fn new(dependencies_resolver: RustProjectDependenciesResolver, pollux_executor: PolluxExecutor) -> Self {
+        Self {
+            dependencies_resolver,
+            pollux_executor,
+        }
+    }
+
+    pub async fn execute(self) -> anyhow::Result<PolluxResults> {
+        let cargo_packages = self.dependencies_resolver.resolve_packages()?;
+        let total_project_packages = cargo_packages.len();
+
+        let (actor, _) = Actor::spawn(None, self.pollux_executor, ()).await?;
+        for package in cargo_packages {
+            actor.cast(PolluxMessage::Evaluate(package))?
+        }
+
+        let max_timeout = CRATESIO_MILLIS_TO_WAIT_AFTER_RATE_LIMITED * 2 * total_project_packages as u64;
+        let results = ractor::call_t!(actor, PolluxMessage::AggregateResults, max_timeout)?;
+        Ok(results)
     }
 }
 
-impl Actor for Pollux {
+pub struct PolluxExecutor {
+    veracity_evaluator: CombinedVeracityEvaluator,
+}
+
+impl PolluxExecutor {
+    pub fn new(veracity_evaluator: CombinedVeracityEvaluator) -> Self {
+        Self { veracity_evaluator }
+    }
+}
+
+impl Actor for PolluxExecutor {
     type Msg = PolluxMessage;
     type State = Vec<EvaluationOutcome>;
     type Arguments = ();
@@ -48,12 +79,14 @@ impl Actor for Pollux {
     ) -> Result<(), ActorProcessingErr> {
         match message {
             PolluxMessage::Evaluate(cargo_package) => {
-                log::info!("[pollux.actor] starting evaluation for package {:?}", &cargo_package);
-                let maybe_evaluated = self.evaluator.evaluate(&cargo_package).await.ok();
-                log::info!("[pollux.actor] finished evaluation for package {:?}", &cargo_package);
+                log::info!("[pollux.actor] starting evaluation for package {}", &cargo_package);
+                let maybe_evaluated = self.veracity_evaluator.evaluate(&cargo_package).await.ok();
+                log::info!("[pollux.actor] finished evaluation for package {}", &cargo_package);
                 state.push((cargo_package, maybe_evaluated));
             },
             PolluxMessage::AggregateResults(reply) => {
+                log::info!("[pollux.actor] computing aggregated results for processed packages");
+
                 let total_evaluated_packages = state
                     .iter()
                     .filter(|(_, evaluation)| evaluation.is_some())
@@ -68,6 +101,7 @@ impl Actor for Pollux {
                     .len();
 
                 let statistics = PolluxStatistics {
+                    total_project_packages: total_evaluated_packages,
                     with_veracity_level: total_packages_with_veracity_level,
                     without_veracity_level: total_evaluated_packages - total_packages_with_veracity_level,
                 };
@@ -78,7 +112,7 @@ impl Actor for Pollux {
                 };
 
                 if reply.send(results).is_err() {
-                    log::info!("[pollux.actor] cannot reply with state");
+                    log::error!("[pollux.actor] cannot reply with state");
                 }
             },
         }

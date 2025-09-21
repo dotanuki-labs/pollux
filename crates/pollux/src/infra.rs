@@ -1,21 +1,39 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-mod caching;
+pub mod caching;
 pub mod cargo;
-mod cratesio;
-mod ossrebuild;
+pub mod cratesio;
+pub mod ossrebuild;
 
 use crate::core::{CargoPackage, CrateVeracityLevel, VeracityEvaluation};
 use crate::infra::caching::DirectoryBased;
 use crate::infra::cratesio::CratesIOEvaluator;
 use crate::infra::ossrebuild::OssRebuildEvaluator;
-use reqwest::Client;
+use reqwest::{Client, header};
 
 #[cfg(test)]
 use std::collections::HashMap;
+use std::sync::{Arc, LazyLock};
+use std::time::Duration;
 
 pub type HTTPClient = Client;
+pub static CRATES_IO_API: &str = "https://crates.io";
+pub static OSS_REBUILD_CRATES_IO_URL: &str = "https://storage.googleapis.com/google-rebuild-attestations/cratesio";
+
+pub static HTTP_CLIENT: LazyLock<Arc<HTTPClient>> = LazyLock::new(|| {
+    let user_agent = format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+
+    let mut headers = header::HeaderMap::new();
+    headers.insert(header::USER_AGENT, header::HeaderValue::from_str(&user_agent).unwrap());
+
+    let client = HTTPClient::builder()
+        .default_headers(headers)
+        .timeout(Duration::from_secs(15))
+        .build()
+        .unwrap();
+    Arc::new(client)
+});
 
 pub enum CrateProvenanceEvaluator {
     CratesOfficialRegistry(CratesIOEvaluator),
@@ -81,57 +99,6 @@ impl VeracityEvaluationStorage for CachedVeracityEvaluator {
                 Ok(())
             },
         }
-    }
-}
-
-pub mod factories {
-    use crate::infra::caching::DirectoryBased;
-    use crate::infra::cratesio::CratesIOEvaluator;
-    use crate::infra::ossrebuild::OssRebuildEvaluator;
-    use crate::infra::{
-        CachedVeracityEvaluator, CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator, HTTPClient,
-    };
-    use reqwest::header;
-    use std::env::home_dir;
-    use std::path::PathBuf;
-    use std::sync::{Arc, LazyLock};
-    use std::time::Duration;
-
-    pub static HTTP_CLIENT: LazyLock<Arc<HTTPClient>> = LazyLock::new(|| {
-        let user_agent = format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
-
-        let mut headers = header::HeaderMap::new();
-        headers.insert(header::USER_AGENT, header::HeaderValue::from_str(&user_agent).unwrap());
-
-        let client = HTTPClient::builder()
-            .default_headers(headers)
-            .timeout(Duration::from_secs(15))
-            .build()
-            .unwrap();
-        Arc::new(client)
-    });
-
-    static CRATES_IO_API: &str = "https://crates.io";
-    static OSS_REBUILD_CRATES_IO_URL: &str = "https://storage.googleapis.com/google-rebuild-attestations/cratesio";
-
-    pub fn cached_evaluator() -> CachedVeracityEvaluator {
-        let cache_folder = match home_dir() {
-            None => PathBuf::from("/var/cache"),
-            Some(dir) => dir.join(".pollux"),
-        };
-
-        let delegate = DirectoryBased::new(cache_folder);
-        CachedVeracityEvaluator::FileSystem(delegate)
-    }
-
-    pub fn provenance_evaluator() -> CrateProvenanceEvaluator {
-        let delegate = CratesIOEvaluator::new(CRATES_IO_API.to_string(), HTTP_CLIENT.clone());
-        CrateProvenanceEvaluator::CratesOfficialRegistry(delegate)
-    }
-
-    pub fn reproducibility_evaluator() -> CrateBuildReproducibilityEvaluator {
-        let delegate = OssRebuildEvaluator::new(OSS_REBUILD_CRATES_IO_URL.to_string(), HTTP_CLIENT.clone());
-        CrateBuildReproducibilityEvaluator::GoogleOssRebuild(delegate)
     }
 }
 
