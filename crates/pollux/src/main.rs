@@ -3,12 +3,13 @@
 
 mod core;
 mod infra;
+mod pollux;
 
-use crate::core::CrateVeracityEvaluation;
-use crate::core::CrateVeracityLevel;
 use crate::infra::cargo::RustProjectDependenciesResolver;
+use crate::pollux::{Pollux, PolluxMessage};
 use clap::Parser;
 use console::style;
+use ractor::Actor;
 use std::path::PathBuf;
 use tikv_jemallocator::Jemalloc;
 
@@ -49,56 +50,34 @@ async fn main() -> anyhow::Result<()> {
     let cargo_packages = dependencies_resolver.resolve_packages()?;
     let total_project_packages = cargo_packages.len();
 
-    println!();
-    println!("Total cargo packages for this project: {}", total_project_packages);
-    println!();
     println!("Evaluating veracity for packages. This operation may take some time ...");
 
-    let veracity_checks = cargo_packages
-        .into_iter()
-        .map(async |package| (package.clone(), veracity_evaluator.evaluate(&package).await))
-        .collect::<Vec<_>>();
+    let pollux = Pollux::new(veracity_evaluator);
 
-    let evaluations = futures::future::join_all(veracity_checks).await;
+    let (actor, _) = Actor::spawn(None, pollux, ()).await?;
+    for package in cargo_packages {
+        actor.cast(PolluxMessage::Evaluate(package))?
+    }
 
-    let total_evaluated_packages = evaluations
-        .iter()
-        .filter(|(_, check)| check.is_ok())
-        .collect::<Vec<_>>()
-        .len();
+    let timeout = 1100 * 2 * total_project_packages as u64;
+    let results = ractor::call_t!(actor, PolluxMessage::AggregateResults, timeout)?;
 
-    let total_packages_with_veracity_level = evaluations
-        .iter()
-        .filter_map(|(_, check)| {
-            if let Ok(level) = check {
-                Some(level.to_owned().clone())
-            } else {
-                None
-            }
-        })
-        .filter(|veracity_level| *veracity_level != CrateVeracityLevel::NotAvailable)
-        .collect::<Vec<_>>()
-        .len();
+    let statistics = results.statistics;
 
     println!();
-    println!("Packages evaluated : {}", total_evaluated_packages);
-    println!(
-        "Packages missing veracity checks : {}",
-        total_project_packages - total_evaluated_packages
-    );
-    println!(
-        "Packages with existing veracity checks : {}",
-        total_packages_with_veracity_level
-    );
+    println!("Packages evaluated : {}", total_project_packages);
+    println!("Missing veracity factors : {}", statistics.without_veracity_level);
+    println!("With existing factors : {}", statistics.with_veracity_level);
     println!();
 
-    evaluations
+    results
+        .outcomes
         .iter()
-        .for_each(|(package, veracity_check)| match veracity_check {
-            Ok(level) => {
+        .for_each(|(package, maybe_veracity_check)| match maybe_veracity_check {
+            Some(level) => {
                 println!("For {} : veracity = {:?} ", package, style(level).cyan());
             },
-            Err(_) => {
+            None => {
                 println!("For {} : {}", package, style("failed to evaluate").red());
             },
         });

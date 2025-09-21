@@ -18,9 +18,9 @@ cargo-lock.workspace = true
 clap = { workspace = true, features = ["derive"] }
 console.workspace = true
 env_logger.workspace = true
-futures.workspace = true
 human-panic.workspace = true
 log.workspace = true
+ractor.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true

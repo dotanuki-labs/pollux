@@ -6,8 +6,6 @@ use crate::infra::{
     CachedVeracityEvaluator, CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator, VeracityEvaluationStorage,
 };
 use std::fmt::Display;
-use std::time::Duration;
-use tokio::time::sleep;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CargoPackage {
@@ -111,8 +109,6 @@ impl CombinedVeracityEvaluator {
         existing_factor: VeracityFactor,
         crate_info: &CargoPackage,
     ) -> anyhow::Result<CrateVeracityLevel> {
-        sleep(Duration::from_millis(1000)).await;
-
         let found_additional_factor = match existing_factor {
             VeracityFactor::ReproducibleBuilds => self.provenance.evaluate(crate_info).await?,
             VeracityFactor::ProvenanceAttested => self.reproducibility.evaluate(crate_info).await?,

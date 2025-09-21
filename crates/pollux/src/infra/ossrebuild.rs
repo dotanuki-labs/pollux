@@ -6,8 +6,6 @@ use crate::infra::HTTPClient;
 use anyhow::bail;
 use reqwest::StatusCode;
 use std::sync::Arc;
-use std::time::Duration;
-use tokio::time::sleep;
 
 pub struct OssRebuildEvaluator {
     base_url: String,
@@ -22,8 +20,6 @@ impl OssRebuildEvaluator {
 
 impl VeracityEvaluation for OssRebuildEvaluator {
     async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
-        sleep(Duration::from_millis(1000)).await;
-
         let endpoint = format!(
             "{}/{}/{}/{}-{}.crate/rebuild.intoto.jsonl",
             self.base_url, crate_info.name, crate_info.version, crate_info.name, crate_info.version
