@@ -3,6 +3,7 @@
 
 pub mod caching;
 pub mod cargo;
+pub mod cli;
 pub mod cratesio;
 pub mod ossrebuild;
 

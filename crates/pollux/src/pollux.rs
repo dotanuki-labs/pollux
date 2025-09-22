@@ -5,6 +5,11 @@ use crate::core::{CargoPackage, CombinedVeracityEvaluator, CrateVeracityEvaluati
 use crate::infra::cargo::RustProjectDependenciesResolver;
 use crate::ioc::CRATESIO_MILLIS_TO_WAIT_AFTER_RATE_LIMITED;
 use ractor::{Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
+use std::path::PathBuf;
+
+pub enum PolluxTask {
+    EvaluateRustProject(PathBuf),
+}
 
 pub type EvaluationOutcome = (CargoPackage, Option<CrateVeracityLevel>);
 
@@ -20,7 +25,7 @@ pub struct PolluxResults {
 }
 
 pub enum PolluxMessage {
-    Evaluate(CargoPackage),
+    EvaluatePackage(CargoPackage),
     AggregateResults(RpcReplyPort<PolluxResults>),
 }
 
@@ -43,7 +48,7 @@ impl Pollux {
 
         let (actor, _) = Actor::spawn(None, self.pollux_executor, ()).await?;
         for package in cargo_packages {
-            actor.cast(PolluxMessage::Evaluate(package))?
+            actor.cast(PolluxMessage::EvaluatePackage(package))?
         }
 
         let max_timeout = CRATESIO_MILLIS_TO_WAIT_AFTER_RATE_LIMITED * 2 * total_project_packages as u64;
@@ -78,7 +83,7 @@ impl Actor for PolluxExecutor {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match message {
-            PolluxMessage::Evaluate(cargo_package) => {
+            PolluxMessage::EvaluatePackage(cargo_package) => {
                 log::info!("[pollux.actor] starting evaluation for package {}", &cargo_package);
                 let maybe_evaluated = self.veracity_evaluator.evaluate(&cargo_package).await.ok();
                 log::info!("[pollux.actor] finished evaluation for package {}", &cargo_package);

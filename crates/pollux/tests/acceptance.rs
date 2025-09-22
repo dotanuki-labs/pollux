@@ -40,7 +40,7 @@ fn should_verify_project_from_lockfile() {
     fs::write(&lockfile_path, lockfile_contents).expect("failed to cargo manifest file");
 
     sut()
-        .args(["--path", cargo_project.path().to_str().unwrap()])
+        .args(["evaluate", "project", cargo_project.path().to_str().unwrap()])
         .assert()
         .success()
         .stdout(contains("Packages evaluated : 3"))
