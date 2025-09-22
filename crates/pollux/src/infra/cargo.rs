@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 use crate::core::CargoPackage;
+use anyhow::bail;
 use cargo_lock::Lockfile;
 use std::path::PathBuf;
+use std::process::Command;
 
 pub struct RustProjectDependenciesResolver {
     project_root: PathBuf,
@@ -15,7 +17,7 @@ impl RustProjectDependenciesResolver {
     }
 
     pub fn resolve_packages(&self) -> anyhow::Result<Vec<CargoPackage>> {
-        let lockfile_path = self.project_root.join("Cargo.lock");
+        let lockfile_path = self.locate_or_generate()?;
         let lockfile = Lockfile::load(lockfile_path)?;
         let crates = lockfile
             .packages
@@ -24,6 +26,32 @@ impl RustProjectDependenciesResolver {
             .collect::<Vec<_>>();
 
         Ok(crates)
+    }
+
+    fn locate_or_generate(&self) -> anyhow::Result<PathBuf> {
+        if !self.project_root.join("Cargo.lock").exists() {
+            self.generate_lockfile()?
+        }
+
+        Ok(self.project_root.join("Cargo.lock"))
+    }
+
+    fn generate_lockfile(&self) -> anyhow::Result<()> {
+        let cargo_update = Command::new("cargo").arg("update").arg("--workspace").status();
+
+        match cargo_update {
+            Ok(status) => {
+                if !status.success() {
+                    log::error!("cargo update failed: {:?}", status);
+                    bail!("error when running `cargo update --workspace`")
+                }
+            },
+            Err(e) => {
+                log::error!("cargo update failed: {}", e);
+                bail!("couldn't run `cargo update --workspace` to generate a lockfile")
+            },
+        }
+        Ok(())
     }
 }
 
