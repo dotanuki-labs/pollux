@@ -22,6 +22,13 @@ impl RustProjectDependenciesResolver {
         let crates = lockfile
             .packages
             .into_iter()
+            .filter(|pkg| {
+                if let Some(source) = &pkg.source {
+                    source.is_default_registry()
+                } else {
+                    false
+                }
+            })
             .map(|pkg| CargoPackage::new(pkg.name.to_string(), pkg.version.to_string()))
             .collect::<Vec<_>>();
 
@@ -93,6 +100,16 @@ mod tests {
             version = "1.0.0"
             source = "registry+https://github.com/rust-lang/crates.io-index"
             checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+            [[package]]
+            name = "my-project"
+            version = "1.0.0"
+            dependencies = [
+                "arbitrary",
+                "autocfg",
+                "bitflags",
+                "cfg-if"
+            ]
         "#;
 
         let cargo_project = TempDir::new().expect("Cant create temp dir");
