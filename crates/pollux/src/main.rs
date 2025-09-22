@@ -6,23 +6,14 @@ mod infra;
 mod ioc;
 mod pollux;
 
-use clap::Parser;
+use crate::infra::cli;
 use console::style;
-use std::path::PathBuf;
 use tikv_jemallocator::Jemalloc;
 
 #[global_allocator]
 static GLOBAL: Jemalloc = Jemalloc;
 
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct ProgramArguments {
-    #[arg(short, long, help = "Path pointing to project root")]
-    pub path: PathBuf,
-}
-
 #[tokio::main]
-
 async fn main() -> anyhow::Result<()> {
     better_panic::install();
     human_panic::setup_panic!();
@@ -35,8 +26,8 @@ async fn main() -> anyhow::Result<()> {
         .format_target(false)
         .init();
 
-    let arguments = ProgramArguments::parse();
-    let pollux = ioc::create_pollux(arguments.path);
+    let task = cli::parse_arguments()?;
+    let pollux = ioc::create_pollux(task);
 
     println!("Evaluating veracity for packages. This operation may take some time ...");
 

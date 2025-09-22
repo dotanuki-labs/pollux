@@ -10,7 +10,7 @@ use crate::infra::{
     CRATES_IO_API, CachedVeracityEvaluator, CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator, HTTP_CLIENT,
     OSS_REBUILD_CRATES_IO_URL,
 };
-use crate::pollux::{Pollux, PolluxExecutor};
+use crate::pollux::{Pollux, PolluxExecutor, PolluxTask};
 use std::env::home_dir;
 use std::path::PathBuf;
 
@@ -44,8 +44,12 @@ fn veracity_evaluator() -> CombinedVeracityEvaluator {
     CombinedVeracityEvaluator::new(cached_evaluator(), provenance_evaluator(), reproducibility_evaluator())
 }
 
-pub fn create_pollux(project_path: PathBuf) -> Pollux {
-    let dependencies_resolver = RustProjectDependenciesResolver::new(project_path);
-    let pollux_executor = PolluxExecutor::new(veracity_evaluator());
-    Pollux::new(dependencies_resolver, pollux_executor)
+pub fn create_pollux(task: PolluxTask) -> Pollux {
+    match task {
+        PolluxTask::EvaluateRustProject(project_path) => {
+            let dependencies_resolver = RustProjectDependenciesResolver::new(project_path);
+            let pollux_executor = PolluxExecutor::new(veracity_evaluator());
+            Pollux::new(dependencies_resolver, pollux_executor)
+        },
+    }
 }
