@@ -5,7 +5,9 @@ use crate::core::CrateVeracityLevel::NotAvailable;
 use crate::infra::{
     CachedVeracityEvaluator, CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator, VeracityEvaluationStorage,
 };
+use packageurl::PackageUrl;
 use std::fmt::Display;
+use std::str::FromStr;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CargoPackage {
@@ -13,12 +15,23 @@ pub struct CargoPackage {
     pub version: String,
 }
 
+impl TryFrom<String> for CargoPackage {
+    type Error = anyhow::Error;
+
+    fn try_from(value: String) -> anyhow::Result<Self> {
+        let purl = PackageUrl::from_str(value.as_str())?;
+        let name = purl.name();
+        let version = purl.version().expect("");
+        let cargo_package = CargoPackage::with(name, version);
+        Ok(cargo_package)
+    }
+}
+
 impl CargoPackage {
     pub fn new(name: String, version: String) -> Self {
         Self { name, version }
     }
 
-    #[cfg(test)]
     pub fn with(name: &str, version: &str) -> Self {
         Self {
             name: name.to_string(),

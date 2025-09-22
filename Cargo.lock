@@ -1694,6 +1694,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "packageurl"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2075186e1968678dc1b2ac0128287e970d642eab4c906bcc6352afd2dd83853"
+dependencies = [
+ "percent-encoding",
+ "thiserror 2.0.16",
+]
+
+[[package]]
 name = "parking"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1843,6 +1853,7 @@ dependencies = [
  "httpmock",
  "human-panic",
  "log",
+ "packageurl",
  "predicates",
  "ractor",
  "reqwest",

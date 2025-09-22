@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 use crate::core::{CargoPackage, CombinedVeracityEvaluator, CrateVeracityEvaluation, CrateVeracityLevel};
-use crate::infra::cargo::RustProjectDependenciesResolver;
+use crate::infra::cargo::{DependenciesResolver, PackagesResolution};
 use crate::ioc::CRATESIO_MILLIS_TO_WAIT_AFTER_RATE_LIMITED;
 use ractor::{Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
 use std::path::PathBuf;
 
 pub enum PolluxTask {
     EvaluateRustProject(PathBuf),
+    EvaluateRustCrate(CargoPackage),
 }
 
 pub type EvaluationOutcome = (CargoPackage, Option<CrateVeracityLevel>);
@@ -30,12 +31,12 @@ pub enum PolluxMessage {
 }
 
 pub struct Pollux {
-    dependencies_resolver: RustProjectDependenciesResolver,
+    dependencies_resolver: DependenciesResolver,
     pollux_executor: PolluxExecutor,
 }
 
 impl Pollux {
-    pub fn new(dependencies_resolver: RustProjectDependenciesResolver, pollux_executor: PolluxExecutor) -> Self {
+    pub fn new(dependencies_resolver: DependenciesResolver, pollux_executor: PolluxExecutor) -> Self {
         Self {
             dependencies_resolver,
             pollux_executor,
@@ -43,7 +44,7 @@ impl Pollux {
     }
 
     pub async fn execute(self) -> anyhow::Result<PolluxResults> {
-        let cargo_packages = self.dependencies_resolver.resolve_packages()?;
+        let cargo_packages = self.dependencies_resolver.resolve().await?;
         let total_project_packages = cargo_packages.len();
 
         let (actor, _) = Actor::spawn(None, self.pollux_executor, ()).await?;
