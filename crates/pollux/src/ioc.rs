@@ -1,16 +1,19 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::CombinedVeracityEvaluator;
-use crate::infra::caching::DirectoryBased;
-use crate::infra::cargo::{CrateArchiveDownloader, DependenciesResolver};
-use crate::infra::cratesio::CratesIOEvaluator;
-use crate::infra::ossrebuild::OssRebuildEvaluator;
-use crate::infra::{
-    CRATES_IO_API, CachedVeracityEvaluator, CrateBuildReproducibilityEvaluator, CrateProvenanceEvaluator, HTTP_CLIENT,
-    OSS_REBUILD_CRATES_IO_URL,
+use crate::core::evaluators::combined::CombinedVeracityEvaluator;
+use crate::core::evaluators::standalone::{
+    BuildReproducibilityEvaluator, CachedExecutionEvaluator, CrateProvenanceEvaluator,
 };
-use crate::pollux::{Pollux, PolluxExecutor, PolluxTask};
+use crate::infra::caching::filesystem::DirectoryBased;
+use crate::infra::networking::crates::CratesDotIOClient;
+use crate::infra::networking::crates::cargo::{CrateArchiveDownloader, DependenciesResolver};
+use crate::infra::networking::crates::registry::OfficialCratesRegistryEvaluator;
+use crate::infra::networking::http::HTTP_CLIENT;
+use crate::infra::networking::ossrebuild::OssRebuildEvaluator;
+use crate::infra::networking::{crates, ossrebuild};
+use crate::pollux::actors::PolluxEvaluatorActor;
+use crate::pollux::{Pollux, PolluxTask};
 use std::env::home_dir;
 use std::path::PathBuf;
 
@@ -23,23 +26,27 @@ fn cache_folder() -> PathBuf {
     }
 }
 
-fn cached_evaluator() -> CachedVeracityEvaluator {
+fn cached_evaluator() -> CachedExecutionEvaluator {
     let delegate = DirectoryBased::new(cache_folder());
-    CachedVeracityEvaluator::FileSystem(delegate)
+    CachedExecutionEvaluator::FileSystem(delegate)
+}
+
+fn cratesio_client() -> CratesDotIOClient {
+    CratesDotIOClient::new(
+        crates::URL_OFFICIAL_CRATES_REGISTRY.to_string(),
+        HTTP_CLIENT.clone(),
+        CRATESIO_MILLIS_TO_WAIT_AFTER_RATE_LIMITED,
+    )
 }
 
 fn provenance_evaluator() -> CrateProvenanceEvaluator {
-    let delegate = CratesIOEvaluator::new(
-        CRATES_IO_API.to_string(),
-        HTTP_CLIENT.clone(),
-        CRATESIO_MILLIS_TO_WAIT_AFTER_RATE_LIMITED,
-    );
+    let delegate = OfficialCratesRegistryEvaluator::new(cratesio_client());
     CrateProvenanceEvaluator::CratesOfficialRegistry(delegate)
 }
 
-fn reproducibility_evaluator() -> CrateBuildReproducibilityEvaluator {
-    let delegate = OssRebuildEvaluator::new(OSS_REBUILD_CRATES_IO_URL.to_string(), HTTP_CLIENT.clone());
-    CrateBuildReproducibilityEvaluator::GoogleOssRebuild(delegate)
+fn reproducibility_evaluator() -> BuildReproducibilityEvaluator {
+    let delegate = OssRebuildEvaluator::new(ossrebuild::URL_OSS_REBUILD_CRATES.to_string(), HTTP_CLIENT.clone());
+    BuildReproducibilityEvaluator::GoogleOssRebuild(delegate)
 }
 
 fn veracity_evaluator() -> CombinedVeracityEvaluator {
@@ -50,13 +57,13 @@ pub fn create_pollux(task: PolluxTask) -> Pollux {
     match task {
         PolluxTask::EvaluateRustProject(project_root) => {
             let dependencies_resolver = DependenciesResolver::LocalRustProject { project_root };
-            let pollux_executor = PolluxExecutor::new(veracity_evaluator());
+            let pollux_executor = PolluxEvaluatorActor::new(veracity_evaluator());
             Pollux::new(dependencies_resolver, pollux_executor)
         },
         PolluxTask::EvaluateRustCrate(cargo_package) => {
             let crate_downloader = CrateArchiveDownloader::new(cache_folder(), cargo_package);
             let dependencies_resolver = DependenciesResolver::StandaloneCargoPackage { crate_downloader };
-            let pollux_executor = PolluxExecutor::new(veracity_evaluator());
+            let pollux_executor = PolluxEvaluatorActor::new(veracity_evaluator());
             Pollux::new(dependencies_resolver, pollux_executor)
         },
     }

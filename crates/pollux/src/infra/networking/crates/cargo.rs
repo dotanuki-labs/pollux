@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::CargoPackage;
+use crate::core::models::CargoPackage;
 use anyhow::bail;
 use cargo_lock::Lockfile;
 use std::fs;
@@ -131,14 +131,14 @@ impl LocalProjectDependenciesResolver {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::CargoPackage;
-    use crate::infra::cargo::LocalProjectDependenciesResolver;
+    use crate::core::models::CargoPackage;
+    use crate::infra::networking::crates::cargo::LocalProjectDependenciesResolver;
     use assertor::EqualityAssertion;
     use std::fs;
     use temp_dir::TempDir;
 
     #[tokio::test]
-    async fn should_detect_multiple_codeowners() {
+    async fn should_extract_packages_from_lockfile() {
         let lockfile_contents = r#"
             # Partillay extracted from.
             # https://github.com/xacrimon/dashmap/blob/master/Cargo.lock

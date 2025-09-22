@@ -1,11 +1,14 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::{CargoPackage, VeracityEvaluation};
-use crate::infra::HTTPClient;
+use crate::core::interfaces::VeracityEvaluation;
+use crate::core::models::CargoPackage;
+use crate::infra::networking::http::HTTPClient;
 use anyhow::bail;
 use reqwest::StatusCode;
 use std::sync::Arc;
+
+pub static URL_OSS_REBUILD_CRATES: &str = "https://storage.googleapis.com/google-rebuild-attestations/cratesio";
 
 pub struct OssRebuildEvaluator {
     base_url: String,
@@ -52,9 +55,10 @@ impl VeracityEvaluation for OssRebuildEvaluator {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{CargoPackage, VeracityEvaluation};
-    use crate::infra::ossrebuild::OssRebuildEvaluator;
-    use crate::infra::{HTTP_CLIENT, MAX_HTTP_RETRY_ATTEMPTS};
+    use crate::core::interfaces::VeracityEvaluation;
+    use crate::core::models::CargoPackage;
+    use crate::infra::networking::http::{HTTP_CLIENT, MAX_HTTP_RETRY_ATTEMPTS};
+    use crate::infra::networking::ossrebuild::OssRebuildEvaluator;
     use assertor::{BooleanAssertion, ResultAssertion};
     use httpmock::MockServer;
 

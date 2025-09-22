@@ -1,6 +1,5 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-pub mod feedback;
-pub mod parsing;
-pub mod troubleshooting;
+pub mod combined;
+pub mod standalone;
