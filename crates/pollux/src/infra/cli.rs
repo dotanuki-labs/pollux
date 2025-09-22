@@ -1,6 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
+use crate::core::CargoPackage;
 use crate::infra::cli::MainCommands::Evaluate;
 use crate::pollux::PolluxTask;
 use anyhow::bail;
@@ -51,7 +52,8 @@ pub fn parse_arguments() -> anyhow::Result<PolluxTask> {
                 PolluxTask::EvaluateRustProject(project_path)
             },
             EvaluationSubject::Crate => {
-                bail!("pollux.cli : not yet implemented")
+                let cargo_package = CargoPackage::try_from(args.input)?;
+                PolluxTask::EvaluateRustCrate(cargo_package)
             },
         },
     };

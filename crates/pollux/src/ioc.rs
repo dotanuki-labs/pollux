@@ -3,7 +3,7 @@
 
 use crate::core::CombinedVeracityEvaluator;
 use crate::infra::caching::DirectoryBased;
-use crate::infra::cargo::RustProjectDependenciesResolver;
+use crate::infra::cargo::{CrateArchiveDownloader, DependenciesResolver};
 use crate::infra::cratesio::CratesIOEvaluator;
 use crate::infra::ossrebuild::OssRebuildEvaluator;
 use crate::infra::{
@@ -16,13 +16,15 @@ use std::path::PathBuf;
 
 pub static CRATESIO_MILLIS_TO_WAIT_AFTER_RATE_LIMITED: u64 = 1100;
 
-fn cached_evaluator() -> CachedVeracityEvaluator {
-    let cache_folder = match home_dir() {
+fn cache_folder() -> PathBuf {
+    match home_dir() {
         None => PathBuf::from("/var/cache"),
         Some(dir) => dir.join(".pollux"),
-    };
+    }
+}
 
-    let delegate = DirectoryBased::new(cache_folder);
+fn cached_evaluator() -> CachedVeracityEvaluator {
+    let delegate = DirectoryBased::new(cache_folder());
     CachedVeracityEvaluator::FileSystem(delegate)
 }
 
@@ -46,8 +48,14 @@ fn veracity_evaluator() -> CombinedVeracityEvaluator {
 
 pub fn create_pollux(task: PolluxTask) -> Pollux {
     match task {
-        PolluxTask::EvaluateRustProject(project_path) => {
-            let dependencies_resolver = RustProjectDependenciesResolver::new(project_path);
+        PolluxTask::EvaluateRustProject(project_root) => {
+            let dependencies_resolver = DependenciesResolver::LocalRustProject { project_root };
+            let pollux_executor = PolluxExecutor::new(veracity_evaluator());
+            Pollux::new(dependencies_resolver, pollux_executor)
+        },
+        PolluxTask::EvaluateRustCrate(cargo_package) => {
+            let crate_downloader = CrateArchiveDownloader::new(cache_folder(), cargo_package);
+            let dependencies_resolver = DependenciesResolver::StandaloneCargoPackage { crate_downloader };
             let pollux_executor = PolluxExecutor::new(veracity_evaluator());
             Pollux::new(dependencies_resolver, pollux_executor)
         },

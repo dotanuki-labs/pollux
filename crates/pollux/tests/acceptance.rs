@@ -11,7 +11,7 @@ fn sut() -> Command {
 }
 
 #[test]
-fn should_verify_project_from_lockfile() {
+fn should_verify_project_from_path() {
     let lockfile_contents = r#"
             version = 3
 
@@ -51,4 +51,14 @@ fn should_verify_project_from_lockfile() {
         .stdout(contains(
             "For pkg:cargo/levenshtein@1.0.5 : veracity = SingleFactor(ReproducibleBuilds)",
         ));
+}
+
+#[test]
+fn should_verify_project_from_package() {
+    sut()
+        .args(["evaluate", "crate", "pkg:cargo/packageurl@0.5.0"])
+        .assert()
+        .success()
+        .stdout(contains("Packages evaluated : 1"))
+        .stdout(contains("For pkg:cargo/arbitrary@1.4.1 : veracity = NotAvailable"));
 }

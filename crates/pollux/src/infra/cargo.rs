@@ -4,19 +4,86 @@
 use crate::core::CargoPackage;
 use anyhow::bail;
 use cargo_lock::Lockfile;
+use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-pub struct RustProjectDependenciesResolver {
+pub trait PackagesResolution {
+    async fn resolve(self) -> anyhow::Result<Vec<CargoPackage>>;
+}
+
+pub enum DependenciesResolver {
+    StandaloneCargoPackage { crate_downloader: CrateArchiveDownloader },
+    LocalRustProject { project_root: PathBuf },
+}
+
+impl PackagesResolution for DependenciesResolver {
+    async fn resolve(self) -> anyhow::Result<Vec<CargoPackage>> {
+        match self {
+            DependenciesResolver::StandaloneCargoPackage { crate_downloader } => {
+                let download_path = crate_downloader.download_extract().await?;
+                let local_resolver = LocalProjectDependenciesResolver::new(download_path);
+                local_resolver.resolve().await
+            },
+            DependenciesResolver::LocalRustProject { project_root } => {
+                let local_resolver = LocalProjectDependenciesResolver::new(project_root);
+                local_resolver.resolve().await
+            },
+        }
+    }
+}
+
+pub struct CrateArchiveDownloader {
+    cache_dir: PathBuf,
+    target_package: CargoPackage,
+}
+
+impl CrateArchiveDownloader {
+    pub fn new(cache_dir: PathBuf, target_package: CargoPackage) -> Self {
+        Self {
+            cache_dir,
+            target_package,
+        }
+    }
+
+    async fn download_extract(&self) -> anyhow::Result<PathBuf> {
+        // fake it until you make it !
+        log::info!("Downloading package {}", self.target_package.name);
+
+        let lockfile_contents = r#"
+            version = 3
+
+            [[package]]
+            name = "arbitrary"
+            version = "1.4.1"
+            source = "registry+https://github.com/rust-lang/crates.io-index"
+            checksum = "dde20b3d026af13f561bdd0f15edf01fc734f0dafcedbaf42bba506a9517f223"
+        "#;
+
+        let project_dir = self.cache_dir.join("downloads").join(self.target_package.to_string());
+
+        match fs::remove_dir_all(&project_dir) {
+            Ok(_) => log::info!("Removed previous downloaded crate for {}", &self.target_package),
+            Err(_) => log::info!("Cannot remove previous downloaded crate for : {}", &self.target_package),
+        };
+
+        fs::create_dir_all(&project_dir)?;
+        let lockfile_path = project_dir.join("Cargo.lock");
+        fs::write(&lockfile_path, lockfile_contents).expect("failed to cargo manifest file");
+        Ok(project_dir)
+    }
+}
+
+struct LocalProjectDependenciesResolver {
     project_root: PathBuf,
 }
 
-impl RustProjectDependenciesResolver {
+impl LocalProjectDependenciesResolver {
     pub fn new(project_root: PathBuf) -> Self {
         Self { project_root }
     }
 
-    pub fn resolve_packages(&self) -> anyhow::Result<Vec<CargoPackage>> {
+    async fn resolve(&self) -> anyhow::Result<Vec<CargoPackage>> {
         let lockfile_path = self.locate_or_generate()?;
         let lockfile = Lockfile::load(lockfile_path)?;
         let crates = lockfile
@@ -65,13 +132,13 @@ impl RustProjectDependenciesResolver {
 #[cfg(test)]
 mod tests {
     use crate::core::CargoPackage;
-    use crate::infra::cargo::RustProjectDependenciesResolver;
+    use crate::infra::cargo::LocalProjectDependenciesResolver;
     use assertor::EqualityAssertion;
     use std::fs;
     use temp_dir::TempDir;
 
-    #[test]
-    fn should_detect_multiple_codeowners() {
+    #[tokio::test]
+    async fn should_detect_multiple_codeowners() {
         let lockfile_contents = r#"
             # Partillay extracted from.
             # https://github.com/xacrimon/dashmap/blob/master/Cargo.lock
@@ -117,11 +184,11 @@ mod tests {
         let lockfile_path = cargo_project.path().join("Cargo.lock");
         fs::write(&lockfile_path, lockfile_contents).expect("failed to cargo manifest file");
 
-        let resolver = RustProjectDependenciesResolver {
+        let resolver = LocalProjectDependenciesResolver {
             project_root: cargo_project.path().to_path_buf(),
         };
 
-        let dependencies = resolver.resolve_packages().expect("resolve_dependencies failed");
+        let dependencies = resolver.resolve().await.expect("resolve_dependencies failed");
 
         let expected_packages = vec![
             CargoPackage::with("arbitrary", "1.4.1"),
