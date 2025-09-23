@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use packageurl::PackageUrl;
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -53,6 +53,19 @@ pub enum CrateVeracityLevel {
     NotAvailable,
     SingleFactor(VeracityFactor),
     TwoFactors,
+}
+
+impl Display for CrateVeracityLevel {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CrateVeracityLevel::NotAvailable => f.write_str("none"),
+            CrateVeracityLevel::SingleFactor(factor) => match factor {
+                VeracityFactor::ReproducibleBuilds => f.write_str("one(reproducible builds)"),
+                VeracityFactor::ProvenanceAttested => f.write_str("one(provenance attested)"),
+            },
+            CrateVeracityLevel::TwoFactors => f.write_str("two(provenance attested; reproducible builds)"),
+        }
+    }
 }
 
 impl CrateVeracityLevel {

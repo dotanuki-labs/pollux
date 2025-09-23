@@ -19,7 +19,9 @@ async fn main() -> anyhow::Result<()> {
     let task = cli::parsing::parse_arguments()?;
     let pollux = ioc::create_pollux(task);
 
+    println!();
     println!("Evaluating veracity for packages. This operation may take some time ...");
+    println!();
 
     let results = pollux.execute().await?;
 

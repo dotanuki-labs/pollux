@@ -1,8 +1,9 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
+use crate::core::interfaces::PackagesResolution;
 use crate::core::models::CargoPackage;
-use crate::infra::networking::crates::{CratesDotIOClient, PackagesResolution};
+use crate::infra::networking::crates::CratesDotIOClient;
 use anyhow::{Context, bail};
 use cargo_lock::Lockfile;
 use decompress::{Decompressor, ExtractOptsBuilder, decompressors};
@@ -10,7 +11,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-static CRATES_PACKAGES_DOWNLOAD_FOLDER: &str = "downloads";
+static CRATE_SOURCES_DOWNLOAD_FOLDER: &str = "downloads";
 
 pub enum DependenciesResolver {
     StandaloneCargoPackage { crate_downloader: CrateArchiveDownloader },
@@ -58,7 +59,7 @@ impl CrateArchiveDownloader {
 
         let project_dir = self
             .cache_dir
-            .join(CRATES_PACKAGES_DOWNLOAD_FOLDER)
+            .join(CRATE_SOURCES_DOWNLOAD_FOLDER)
             .join(&self.target_package.name);
 
         match fs::remove_dir_all(&project_dir) {
@@ -153,7 +154,6 @@ impl LocalProjectDependenciesResolver {
             .current_dir(&self.project_root)
             .arg("update")
             .arg("--workspace")
-            .arg("--verbose")
             .status();
 
         match cargo_update {

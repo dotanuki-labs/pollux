@@ -43,13 +43,13 @@ fn should_verify_project_from_path() {
         .args(["evaluate", "project", cargo_project.path().to_str().unwrap()])
         .assert()
         .success()
-        .stdout(contains("Packages evaluated : 3"))
-        .stdout(contains("For pkg:cargo/arbitrary@1.4.1 : veracity = NotAvailable"))
+        .stdout(contains("total packages evaluated : 3"))
+        .stdout(contains("pkg:cargo/arbitrary@1.4.1 | veracity factors = none"))
         .stdout(contains(
-            "For pkg:cargo/find-msvc-tools@0.1.1 : veracity = SingleFactor(ProvenanceAttested)",
+            "pkg:cargo/find-msvc-tools@0.1.1 | veracity factors = one(provenance attested)",
         ))
         .stdout(contains(
-            "For pkg:cargo/levenshtein@1.0.5 : veracity = SingleFactor(ReproducibleBuilds)",
+            "pkg:cargo/levenshtein@1.0.5 | veracity factors = one(reproducible builds)",
         ));
 }
 
@@ -59,6 +59,6 @@ fn should_verify_project_from_package_purl() {
         .args(["evaluate", "crate", "pkg:cargo/serde@1.0.226"])
         .assert()
         .success()
-        .stdout(contains("Packages evaluated : 6"))
-        .stdout(contains("For pkg:cargo/proc-macro2@1.0.101 : veracity = NotAvailable"));
+        .stdout(contains("total packages evaluated : 6"))
+        .stdout(contains("pkg:cargo/proc-macro2@1.0.101 | veracity factors = none"));
 }
