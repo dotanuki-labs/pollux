@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 use crate::core::models::CargoPackage;
-use anyhow::bail;
+use crate::infra::networking::crates::{CratesDotIOClient, PackagesResolution};
+use anyhow::{Context, bail};
 use cargo_lock::Lockfile;
+use decompress::{Decompressor, ExtractOptsBuilder, decompressors};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-pub trait PackagesResolution {
-    async fn resolve(self) -> anyhow::Result<Vec<CargoPackage>>;
-}
+static CRATES_PACKAGES_DOWNLOAD_FOLDER: &str = "downloads";
 
 pub enum DependenciesResolver {
     StandaloneCargoPackage { crate_downloader: CrateArchiveDownloader },
@@ -34,43 +34,69 @@ impl PackagesResolution for DependenciesResolver {
 }
 
 pub struct CrateArchiveDownloader {
+    cratesio_client: CratesDotIOClient,
     cache_dir: PathBuf,
     target_package: CargoPackage,
 }
 
 impl CrateArchiveDownloader {
-    pub fn new(cache_dir: PathBuf, target_package: CargoPackage) -> Self {
+    pub fn new(cratesio_client: CratesDotIOClient, cache_dir: PathBuf, target_package: CargoPackage) -> Self {
         Self {
+            cratesio_client,
             cache_dir,
             target_package,
         }
     }
 
     async fn download_extract(&self) -> anyhow::Result<PathBuf> {
-        // fake it until you make it !
-        log::info!("Downloading package {}", self.target_package.name);
+        log::info!("[pollux.cargo] downloading package : {}", self.target_package.name);
 
-        let lockfile_contents = r#"
-            version = 3
+        let downloaded = self
+            .cratesio_client
+            .get_crate_tarball(&self.target_package.name, &self.target_package.version)
+            .await?;
 
-            [[package]]
-            name = "arbitrary"
-            version = "1.4.1"
-            source = "registry+https://github.com/rust-lang/crates.io-index"
-            checksum = "dde20b3d026af13f561bdd0f15edf01fc734f0dafcedbaf42bba506a9517f223"
-        "#;
-
-        let project_dir = self.cache_dir.join("downloads").join(self.target_package.to_string());
+        let project_dir = self
+            .cache_dir
+            .join(CRATES_PACKAGES_DOWNLOAD_FOLDER)
+            .join(&self.target_package.name);
 
         match fs::remove_dir_all(&project_dir) {
-            Ok(_) => log::info!("Removed previous downloaded crate for {}", &self.target_package),
-            Err(_) => log::info!("Cannot remove previous downloaded crate for : {}", &self.target_package),
+            Ok(_) => log::info!(
+                "[pollux.cargo] removed previous downloaded archive for {}",
+                &self.target_package
+            ),
+            Err(_) => log::info!(
+                "[pollux.cargo] cannot remove previous downloaded archive for : {}",
+                &self.target_package
+            ),
         };
 
-        fs::create_dir_all(&project_dir)?;
-        let lockfile_path = project_dir.join("Cargo.lock");
-        fs::write(&lockfile_path, lockfile_contents).expect("failed to cargo manifest file");
-        Ok(project_dir)
+        fs::create_dir_all(&project_dir).context("failed to crate download folder")?;
+        let tarball_path = project_dir.join("crate.tar.gz");
+        fs::write(&tarball_path, downloaded).context("failed to save crate archive")?;
+
+        log::info!("[pollux.cargo] decompressing package : {}", &self.target_package);
+
+        // we levaregate the targz format as per what similar crates like
+        // https://crates.io/crates/crate_untar also do
+        let decompressor = decompressors::targz::Targz::default();
+        let extraction_opts = ExtractOptsBuilder::default().build()?;
+        decompressor.decompress(&tarball_path, &project_dir, &extraction_opts)?;
+
+        // by convention, a tarball for a package pkg:cargo/crate@x.y.z
+        // will extract to a crate-x.y.z folder
+        let extraction_path = format!("{}-{}", self.target_package.name, self.target_package.version);
+        let output_dir = project_dir.join(extraction_path);
+
+        // we remove the downloaded tarball after
+        fs::remove_file(tarball_path).context("failed to remove tarball")?;
+
+        log::info!(
+            "[pollux.cargo] downloaded and extracted files for {}",
+            &self.target_package
+        );
+        Ok(output_dir)
     }
 }
 
@@ -104,25 +130,42 @@ impl LocalProjectDependenciesResolver {
 
     fn locate_or_generate(&self) -> anyhow::Result<PathBuf> {
         if !self.project_root.join("Cargo.lock").exists() {
-            self.generate_lockfile()?
+            match self.generate_lockfile() {
+                Ok(_) => {
+                    if !self.project_root.join("Cargo.lock").exists() {
+                        bail!("cargo command succeed but lockfile was not generated")
+                    }
+                    log::info!("[pollux.cargo] generated missing lockfile with success")
+                },
+                Err(e) => {
+                    log::error!("[pollux.cargo] cannot generate lockfile : {}", e);
+                    bail!(e)
+                },
+            }
         }
 
         Ok(self.project_root.join("Cargo.lock"))
     }
 
     fn generate_lockfile(&self) -> anyhow::Result<()> {
-        let cargo_update = Command::new("cargo").arg("update").arg("--workspace").status();
+        log::info!("[pollux.cargo] project root : {:?}", &self.project_root);
+        let cargo_update = Command::new("cargo")
+            .current_dir(&self.project_root)
+            .arg("update")
+            .arg("--workspace")
+            .arg("--verbose")
+            .status();
 
         match cargo_update {
             Ok(status) => {
                 if !status.success() {
-                    log::error!("cargo update failed: {:?}", status);
+                    log::error!("[pollux.cargo] cargo update failed");
                     bail!("error when running `cargo update --workspace`")
                 }
             },
             Err(e) => {
-                log::error!("cargo update failed: {}", e);
-                bail!("couldn't run `cargo update --workspace` to generate a lockfile")
+                log::error!("[pollux.cargo] cargo update failed: {}", e);
+                bail!("error when running `cargo update --workspace`")
             },
         }
         Ok(())
