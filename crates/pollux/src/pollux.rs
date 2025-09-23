@@ -4,7 +4,8 @@
 pub mod actors;
 
 use crate::core::models::{CargoPackage, PolluxResults};
-use crate::infra::networking::crates::cargo::{DependenciesResolver, PackagesResolution};
+use crate::infra::networking::crates::PackagesResolution;
+use crate::infra::networking::crates::cargo::DependenciesResolver;
 use crate::ioc::CRATESIO_MILLIS_TO_WAIT_AFTER_RATE_LIMITED;
 use crate::pollux::actors::PolluxEvaluatorActor;
 use ractor::{Actor, RpcReplyPort};

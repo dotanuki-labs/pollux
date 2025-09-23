@@ -61,7 +61,7 @@ pub fn create_pollux(task: PolluxTask) -> Pollux {
             Pollux::new(dependencies_resolver, pollux_executor)
         },
         PolluxTask::EvaluateRustCrate(cargo_package) => {
-            let crate_downloader = CrateArchiveDownloader::new(cache_folder(), cargo_package);
+            let crate_downloader = CrateArchiveDownloader::new(cratesio_client(), cache_folder(), cargo_package);
             let dependencies_resolver = DependenciesResolver::StandaloneCargoPackage { crate_downloader };
             let pollux_executor = PolluxEvaluatorActor::new(veracity_evaluator());
             Pollux::new(dependencies_resolver, pollux_executor)

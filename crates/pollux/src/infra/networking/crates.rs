@@ -1,7 +1,9 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
+use crate::core::models::CargoPackage;
 use crate::infra::networking::http::HTTPClient;
+use anyhow::Context;
 use serde::Deserialize;
 use std::sync::Arc;
 use std::time::Duration;
@@ -64,7 +66,30 @@ impl CratesDotIOClient {
         Ok(crates_details.version.trustpub_data.is_some())
     }
 
-    pub async fn honor_cratesio_rate_limit(&self) {
+    pub async fn get_crate_tarball(&self, crate_name: &str, crate_version: &str) -> anyhow::Result<bytes::Bytes> {
+        self.honor_cratesio_rate_limit().await;
+
+        let endpoint = format!(
+            "{}/api/v1/crates/{}/{}/download",
+            self.base_url, crate_name, crate_version
+        );
+        let response = self
+            .http_client
+            .get(&endpoint)
+            .send()
+            .await?
+            .error_for_status()
+            .context("[pollux.cratesio] failed to download crate tarball")?;
+
+        let bytes = response.bytes().await?;
+        Ok(bytes)
+    }
+
+    async fn honor_cratesio_rate_limit(&self) {
         sleep(Duration::from_millis(self.enforced_delay)).await
     }
+}
+
+pub trait PackagesResolution {
+    async fn resolve(self) -> anyhow::Result<Vec<CargoPackage>>;
 }

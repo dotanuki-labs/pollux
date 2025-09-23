@@ -54,11 +54,11 @@ fn should_verify_project_from_path() {
 }
 
 #[test]
-fn should_verify_project_from_package() {
+fn should_verify_project_from_package_purl() {
     sut()
-        .args(["evaluate", "crate", "pkg:cargo/packageurl@0.5.0"])
+        .args(["evaluate", "crate", "pkg:cargo/serde@1.0.226"])
         .assert()
         .success()
-        .stdout(contains("Packages evaluated : 1"))
-        .stdout(contains("For pkg:cargo/arbitrary@1.4.1 : veracity = NotAvailable"));
+        .stdout(contains("Packages evaluated : 6"))
+        .stdout(contains("For pkg:cargo/proc-macro2@1.0.101 : veracity = NotAvailable"));
 }
