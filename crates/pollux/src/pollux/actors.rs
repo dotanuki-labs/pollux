@@ -20,7 +20,7 @@ impl PolluxEvaluatorActor {
 impl Actor for PolluxEvaluatorActor {
     type Msg = PolluxMessage;
     type State = Vec<EvaluationOutcome>;
-    type Arguments = ();
+    type Arguments = u64;
 
     async fn pre_start(&self, _: ActorRef<Self::Msg>, _: Self::Arguments) -> Result<Self::State, ActorProcessingErr> {
         Ok(vec![])
@@ -30,25 +30,25 @@ impl Actor for PolluxEvaluatorActor {
         &self,
         _: ActorRef<Self::Msg>,
         message: Self::Msg,
-        state: &mut Self::State,
+        packages: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match message {
             PolluxMessage::EvaluatePackage(cargo_package) => {
                 log::info!("[pollux.actor] starting evaluation for package {}", &cargo_package);
                 let maybe_evaluated = self.veracity_evaluator.evaluate(&cargo_package).await.ok();
                 log::info!("[pollux.actor] finished evaluation for package {}", &cargo_package);
-                state.push((cargo_package, maybe_evaluated));
+                packages.push((cargo_package, maybe_evaluated));
             },
             PolluxMessage::AggregateResults(reply) => {
                 log::info!("[pollux.actor] computing aggregated results for processed packages");
 
-                let total_evaluated_packages = state
+                let total_evaluated_packages = packages
                     .iter()
                     .filter(|(_, evaluation)| evaluation.is_some())
                     .collect::<Vec<_>>()
                     .len();
 
-                let total_packages_with_veracity_level = state
+                let total_packages_with_veracity_level = packages
                     .iter()
                     .filter_map(|(_, evaluation)| evaluation.as_ref())
                     .filter(|veracity_level| **veracity_level != CrateVeracityLevel::NotAvailable)
@@ -63,7 +63,7 @@ impl Actor for PolluxEvaluatorActor {
 
                 let results = PolluxResults {
                     statistics,
-                    outcomes: state.clone(),
+                    outcomes: packages.clone(),
                 };
 
                 if reply.send(results).is_err() {

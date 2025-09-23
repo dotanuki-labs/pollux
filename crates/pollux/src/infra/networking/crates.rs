@@ -1,7 +1,6 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::models::CargoPackage;
 use crate::infra::networking::http::HTTPClient;
 use anyhow::Context;
 use serde::Deserialize;
@@ -88,8 +87,4 @@ impl CratesDotIOClient {
     async fn honor_cratesio_rate_limit(&self) {
         sleep(Duration::from_millis(self.enforced_delay)).await
     }
-}
-
-pub trait PackagesResolution {
-    async fn resolve(self) -> anyhow::Result<Vec<CargoPackage>>;
 }

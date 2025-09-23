@@ -17,7 +17,7 @@ use crate::pollux::{Pollux, PolluxTask};
 use std::env::home_dir;
 use std::path::PathBuf;
 
-pub static CRATESIO_MILLIS_TO_WAIT_AFTER_RATE_LIMITED: u64 = 1100;
+pub static MILLIS_TO_WAIT_AFTER_RATE_LIMITED: u64 = 1100;
 
 fn cache_folder() -> PathBuf {
     match home_dir() {
@@ -35,7 +35,7 @@ fn cratesio_client() -> CratesDotIOClient {
     CratesDotIOClient::new(
         crates::URL_OFFICIAL_CRATES_REGISTRY.to_string(),
         HTTP_CLIENT.clone(),
-        CRATESIO_MILLIS_TO_WAIT_AFTER_RATE_LIMITED,
+        MILLIS_TO_WAIT_AFTER_RATE_LIMITED,
     )
 }
 

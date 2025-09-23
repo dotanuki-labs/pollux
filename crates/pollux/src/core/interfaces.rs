@@ -15,3 +15,7 @@ pub trait VeracityEvaluationStorage {
     fn read(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel>;
     fn save(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()>;
 }
+
+pub trait PackagesResolution {
+    async fn resolve(self) -> anyhow::Result<Vec<CargoPackage>>;
+}

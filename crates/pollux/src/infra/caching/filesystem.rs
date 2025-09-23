@@ -6,7 +6,8 @@ use crate::core::models::{CargoPackage, CrateVeracityLevel};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-static VERACITY_FILE_NAME: &str = "veracity-checks.json";
+static VERACITY_CHECKS_FILE_NAME: &str = "checks.json";
+static VERACITY_CHECKS_CACHE_FOLDER: &str = "cache";
 
 #[derive(Debug, Serialize, Deserialize)]
 struct CachedVeracityInfo {
@@ -26,7 +27,7 @@ impl DirectoryBased {
 
     fn data_dir(&self, crate_info: &CargoPackage) -> PathBuf {
         self.cache_dir
-            .join("cache")
+            .join(VERACITY_CHECKS_CACHE_FOLDER)
             .join(&crate_info.name)
             .join(&crate_info.version)
     }
@@ -35,7 +36,7 @@ impl DirectoryBased {
 impl VeracityEvaluationStorage for DirectoryBased {
     fn read(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
         let destination_dir = self.data_dir(crate_info);
-        let cache_file = destination_dir.join(VERACITY_FILE_NAME);
+        let cache_file = destination_dir.join(VERACITY_CHECKS_FILE_NAME);
 
         if !cache_file.exists() {
             log::info!("[pollux.cache] {:?} not found", destination_dir);
@@ -51,10 +52,10 @@ impl VeracityEvaluationStorage for DirectoryBased {
 
     fn save(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
         let destination_dir = self.data_dir(crate_info);
-        let cache_file = destination_dir.join(VERACITY_FILE_NAME);
+        let cache_file = destination_dir.join(VERACITY_CHECKS_FILE_NAME);
 
         if !destination_dir.exists() {
-            std::fs::create_dir_all(&destination_dir).expect("cannot create cache at $HOME");
+            std::fs::create_dir_all(&destination_dir).expect("cannot create cache folder");
             log::info!("[pollux.cache] {:?} created", destination_dir);
         }
 
@@ -67,7 +68,7 @@ impl VeracityEvaluationStorage for DirectoryBased {
         };
 
         let serialized = serde_json::to_vec(&cached_veracity)?;
-        std::fs::write(destination_dir.join(VERACITY_FILE_NAME), serialized)?;
+        std::fs::write(destination_dir.join(VERACITY_CHECKS_FILE_NAME), serialized)?;
         log::info!("[pollux.cache] {:?} saved", cache_file);
         Ok(())
     }
