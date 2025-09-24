@@ -3,8 +3,8 @@
 
 use crate::core::interfaces::{VeracityEvaluationStorage, VeracityFactorEvaluation};
 use crate::core::models::{CargoPackage, CrateVeracityLevel};
-use crate::infra::caching::filesystem::DirectoryBased;
-use crate::infra::networking::crates::registry::OfficialCratesRegistryEvaluator;
+use crate::infra::caching::evaluations::VeracityEvaluationsCache;
+use crate::infra::networking::crates::OfficialCratesRegistryEvaluator;
 use crate::infra::networking::ossrebuild::OssRebuildEvaluator;
 #[cfg(test)]
 use std::collections::HashMap;
@@ -42,15 +42,15 @@ impl VeracityFactorEvaluation for BuildReproducibilityEvaluator {
 }
 
 pub enum CachedExecutionEvaluator {
-    FileSystem(DirectoryBased),
+    FileSystem(VeracityEvaluationsCache),
     #[cfg(test)]
     FakeCache(HashMap<String, CrateVeracityLevel>),
 }
 
 impl VeracityEvaluationStorage for CachedExecutionEvaluator {
-    fn read(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
+    fn retrieve_evaluation(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
         match self {
-            CachedExecutionEvaluator::FileSystem(delegate) => delegate.read(crate_info),
+            CachedExecutionEvaluator::FileSystem(delegate) => delegate.retrieve_evaluation(crate_info),
             #[cfg(test)]
             CachedExecutionEvaluator::FakeCache(fakes) => Ok(fakes
                 .get(&crate_info.name)
@@ -59,9 +59,9 @@ impl VeracityEvaluationStorage for CachedExecutionEvaluator {
         }
     }
 
-    fn save(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
+    fn save_evaluation(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
         match self {
-            CachedExecutionEvaluator::FileSystem(delegate) => delegate.save(crate_info, veracity_level),
+            CachedExecutionEvaluator::FileSystem(delegate) => delegate.save_evaluation(crate_info, veracity_level),
             #[cfg(test)]
             CachedExecutionEvaluator::FakeCache(fakes) => {
                 fakes.to_owned().insert(crate_info.name.clone(), veracity_level);

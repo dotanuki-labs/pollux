@@ -3,10 +3,9 @@
 
 pub mod actors;
 
-use crate::core::interfaces::PackagesResolution;
 use crate::core::models::{CargoPackage, PolluxResults};
 use crate::infra::caching::CacheManager;
-use crate::infra::networking::crates::cargo::DependenciesResolver;
+use crate::infra::networking::crates::resolvers::DependenciesResolver;
 use crate::ioc::MILLIS_TO_WAIT_AFTER_RATE_LIMITED;
 use crate::pollux::actors::PolluxEvaluatorActor;
 use console::style;
