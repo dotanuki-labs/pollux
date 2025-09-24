@@ -1,90 +1,188 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::infra::networking::http::HTTPClient;
-use anyhow::Context;
-use serde::Deserialize;
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::time::sleep;
+use crate::core::interfaces::VeracityFactorEvaluation;
+use crate::core::models::CargoPackage;
+use crate::infra::networking::crates::registry::CratesDotIOClient;
 
-pub mod cargo;
 pub mod registry;
+pub mod resolvers;
+pub mod tarballs;
 
-pub static URL_OFFICIAL_CRATES_REGISTRY: &str = "https://crates.io";
-
-#[derive(Deserialize)]
-#[allow(dead_code)]
-struct TrustPubData {
-    provider: String,
-    repository: String,
-    run_id: String,
+pub struct OfficialCratesRegistryEvaluator {
+    cratesio_client: CratesDotIOClient,
 }
 
-#[derive(Deserialize)]
-#[allow(unused_variables)]
-struct InfoForCrateVersion {
-    trustpub_data: Option<TrustPubData>,
+impl OfficialCratesRegistryEvaluator {
+    pub fn new(cratesio_client: CratesDotIOClient) -> Self {
+        Self { cratesio_client }
+    }
 }
 
-#[derive(Deserialize)]
-#[allow(unused_variables)]
-struct CrateVersionDetails {
-    version: InfoForCrateVersion,
+impl VeracityFactorEvaluation for OfficialCratesRegistryEvaluator {
+    async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
+        let has_provenance = self
+            .cratesio_client
+            .get_crate_version_details(crate_info.name.as_str(), crate_info.version.as_str())
+            .await?;
+
+        if has_provenance {
+            log::info!("[pollux.evaluator] found provenance for {} ", crate_info,);
+            return Ok(has_provenance);
+        };
+
+        log::info!("[pollux.evaluator] provenance not found for {}", crate_info);
+        Ok(has_provenance)
+    }
 }
 
-pub struct CratesDotIOClient {
-    base_url: String,
-    http_client: Arc<HTTPClient>,
-    enforced_delay: u64,
-}
+#[cfg(test)]
+mod tests {
+    use crate::core::interfaces::VeracityFactorEvaluation;
+    use crate::core::models::CargoPackage;
+    use crate::infra::networking::crates::OfficialCratesRegistryEvaluator;
+    use crate::infra::networking::crates::registry::CratesDotIOClient;
+    use crate::infra::networking::http::{HTTP_CLIENT, MAX_HTTP_RETRY_ATTEMPTS};
+    use assertor::{BooleanAssertion, ResultAssertion};
+    use httpmock::{MockServer, Then, When};
 
-impl CratesDotIOClient {
-    pub fn new(base_url: String, http_client: Arc<HTTPClient>, enforced_delay: u64) -> Self {
-        Self {
-            base_url,
-            http_client,
-            enforced_delay,
+    static SMALL_DELAY_FOR_RATE_LIMITING: u64 = 10;
+
+    fn responds_with_existing_provenance(crate_name: &str, crate_version: &str) -> impl FnOnce(When, Then) {
+        move |when, then| {
+            let crate_version_template = r#"
+                    {
+                      "version": {
+                        "id": 1711352,
+                        "crate": "<CRATE_NAME>",
+                        "num": "<CRATE_VERSION>",
+                        "trustpub_data": {
+                          "provider": "github",
+                          "repository": "elastio/bon",
+                          "run_id": "17402178810",
+                          "sha": "bbd8b099ea52bf4de18051d012c8113cf0dca23a"
+                        }
+                      }
+                    }
+                "#;
+
+            let payload = crate_version_template
+                .replace("<CRATE_NAME>", crate_name)
+                .replace("<CRATE_VERSION>", crate_version);
+
+            when.method("GET")
+                .path(format!("/api/v1/crates/{}/{}", crate_name, crate_version));
+
+            then.status(200)
+                .header("content-type", "application/json; charset=UTF-8")
+                .body(payload);
         }
     }
 
-    pub async fn get_crate_version_details(&self, crate_name: &str, crate_version: &str) -> anyhow::Result<bool> {
-        self.honor_cratesio_rate_limit().await;
+    fn responds_without_provenance(crate_name: &str, crate_version: &str) -> impl FnOnce(When, Then) {
+        move |when, then| {
+            let crate_version_template = r#"
+                    {
+                      "version": {
+                        "id": 1711352,
+                        "crate": "<CRATE_NAME>",
+                        "num": "<CRATE_VERSION>",
+                        "trustpub_data": null
+                      }
+                    }
+                "#;
 
-        let endpoint = format!("{}/api/v1/crates/{}/{}", self.base_url, crate_name, crate_version);
+            let payload = crate_version_template
+                .replace("<CRATE_NAME>", crate_name)
+                .replace("<CRATE_VERSION>", crate_version);
 
-        let crates_details = self
-            .http_client
-            .get(&endpoint)
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<CrateVersionDetails>()
-            .await?;
+            when.method("GET")
+                .path(format!("/api/v1/crates/{}/{}", crate_name, crate_version));
 
-        Ok(crates_details.version.trustpub_data.is_some())
+            then.status(200)
+                .header("content-type", "application/json; charset=UTF-8")
+                .body(payload);
+        }
     }
 
-    pub async fn get_crate_tarball(&self, crate_name: &str, crate_version: &str) -> anyhow::Result<bytes::Bytes> {
-        self.honor_cratesio_rate_limit().await;
+    fn responds_without_server_error(crate_name: &str, crate_version: &str) -> impl FnOnce(When, Then) {
+        move |when, then| {
+            when.method("GET")
+                .path(format!("/api/v1/crates/{}/{}", crate_name, crate_version));
 
-        let endpoint = format!(
-            "{}/api/v1/crates/{}/{}/download",
-            self.base_url, crate_name, crate_version
+            then.status(503)
+                .header("content-type", "application/text; charset=UTF-8")
+                .body("internal error");
+        }
+    }
+
+    #[tokio::test]
+    async fn should_evaluate_crate_provenance_when_available() {
+        let crate_name = "bon";
+        let crate_version = "3.7.2";
+        let crate_info = CargoPackage::with(crate_name, crate_version);
+
+        let mock_server = MockServer::start();
+        let cratesio_client = CratesDotIOClient::new(
+            mock_server.base_url(),
+            HTTP_CLIENT.clone(),
+            SMALL_DELAY_FOR_RATE_LIMITING,
         );
-        let response = self
-            .http_client
-            .get(&endpoint)
-            .send()
-            .await?
-            .error_for_status()
-            .context("[pollux.cratesio] failed to download crate tarball")?;
+        let evaluator = OfficialCratesRegistryEvaluator::new(cratesio_client);
 
-        let bytes = response.bytes().await?;
-        Ok(bytes)
+        let with_provenance = responds_with_existing_provenance(crate_name, crate_version);
+        let mocked = mock_server.mock(with_provenance);
+
+        let evaluation = evaluator.evaluate(&crate_info).await.unwrap();
+
+        mocked.assert();
+        assertor::assert_that!(evaluation).is_true()
     }
 
-    async fn honor_cratesio_rate_limit(&self) {
-        sleep(Duration::from_millis(self.enforced_delay)).await
+    #[tokio::test]
+    async fn should_evaluate_crate_provenance_when_not_available() {
+        let crate_name = "canopus";
+        let crate_version = "0.1.1";
+        let crate_info = CargoPackage::with(crate_name, crate_version);
+
+        let mock_server = MockServer::start();
+        let cratesio_client = CratesDotIOClient::new(
+            mock_server.base_url(),
+            HTTP_CLIENT.clone(),
+            SMALL_DELAY_FOR_RATE_LIMITING,
+        );
+        let evaluator = OfficialCratesRegistryEvaluator::new(cratesio_client);
+
+        let without_provenance = responds_without_provenance(crate_name, crate_version);
+
+        let mocked = mock_server.mock(without_provenance);
+
+        let evaluation = evaluator.evaluate(&crate_info).await.unwrap();
+
+        mocked.assert();
+        assertor::assert_that!(evaluation).is_false()
+    }
+
+    #[tokio::test]
+    async fn should_evaluate_provenance_when_server_not_available() {
+        let crate_name = "canopus";
+        let crate_version = "0.0.1";
+        let crate_info = CargoPackage::with(crate_name, crate_version);
+
+        let mock_server = MockServer::start();
+        let cratesio_client = CratesDotIOClient::new(
+            mock_server.base_url(),
+            HTTP_CLIENT.clone(),
+            SMALL_DELAY_FOR_RATE_LIMITING,
+        );
+        let evaluator = OfficialCratesRegistryEvaluator::new(cratesio_client);
+
+        let not_found = responds_without_server_error(crate_name, crate_version);
+        let mocked = mock_server.mock(not_found);
+
+        let evaluation = evaluator.evaluate(&crate_info).await;
+
+        mocked.assert_hits(MAX_HTTP_RETRY_ATTEMPTS as usize + 1);
+        assertor::assert_that!(evaluation).is_err()
     }
 }

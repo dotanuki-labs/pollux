@@ -1,18 +1,12 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::interfaces::PackagesResolution;
 use crate::core::models::CargoPackage;
-use crate::infra::caching::CacheManager;
-use crate::infra::networking::crates::CratesDotIOClient;
-use anyhow::{Context, bail};
+use crate::infra::networking::crates::tarballs::CrateArchiveDownloader;
+use anyhow::bail;
 use cargo_lock::Lockfile;
-use decompress::{Decompressor, ExtractOptsBuilder, decompressors};
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-
-static CRATE_SOURCES_DOWNLOAD_FOLDER: &str = "packages";
 
 pub struct DependenciesResolver {
     crate_downloader: CrateArchiveDownloader,
@@ -22,81 +16,16 @@ impl DependenciesResolver {
     pub fn new(crate_downloader: CrateArchiveDownloader) -> Self {
         Self { crate_downloader }
     }
-}
 
-impl PackagesResolution for DependenciesResolver {
-    async fn resolve_for_local_project(&self, project_path: &Path) -> anyhow::Result<Vec<CargoPackage>> {
+    pub async fn resolve_for_local_project(&self, project_path: &Path) -> anyhow::Result<Vec<CargoPackage>> {
         let local_resolver = LocalProjectDependenciesResolver::new(project_path.to_path_buf());
         local_resolver.resolve().await
     }
 
-    async fn resolve_for_crate_package(&self, cargo_package: &CargoPackage) -> anyhow::Result<Vec<CargoPackage>> {
+    pub async fn resolve_for_crate_package(&self, cargo_package: &CargoPackage) -> anyhow::Result<Vec<CargoPackage>> {
         let download_path = self.crate_downloader.download_extract(cargo_package).await?;
         let local_resolver = LocalProjectDependenciesResolver::new(download_path);
         local_resolver.resolve().await
-    }
-}
-
-pub struct CrateArchiveDownloader {
-    cratesio_client: CratesDotIOClient,
-    cache_manager: CacheManager,
-}
-
-impl CrateArchiveDownloader {
-    pub fn new(cratesio_client: CratesDotIOClient, cache_manager: CacheManager) -> Self {
-        Self {
-            cratesio_client,
-            cache_manager,
-        }
-    }
-
-    async fn download_extract(&self, target_package: &CargoPackage) -> anyhow::Result<PathBuf> {
-        log::info!("[pollux.cargo] downloading package : {}", target_package.name);
-
-        let downloaded = self
-            .cratesio_client
-            .get_crate_tarball(&target_package.name, &target_package.version)
-            .await?;
-
-        let project_dir = self
-            .cache_manager
-            .packages_cache_dir()
-            .join(CRATE_SOURCES_DOWNLOAD_FOLDER)
-            .join(&target_package.name);
-
-        match fs::remove_dir_all(&project_dir) {
-            Ok(_) => log::info!(
-                "[pollux.cargo] removed previous downloaded archive for {}",
-                &target_package
-            ),
-            Err(_) => log::info!(
-                "[pollux.cargo] cannot remove previous downloaded archive for : {}",
-                &target_package
-            ),
-        };
-
-        fs::create_dir_all(&project_dir).context("failed to crate download folder")?;
-        let tarball_path = project_dir.join("crate.tar.gz");
-        fs::write(&tarball_path, downloaded).context("failed to save crate archive")?;
-
-        log::info!("[pollux.cargo] decompressing package : {}", &target_package);
-
-        // we levaregate the targz format as per what similar crates like
-        // https://crates.io/crates/crate_untar also do
-        let decompressor = decompressors::targz::Targz::default();
-        let extraction_opts = ExtractOptsBuilder::default().build()?;
-        decompressor.decompress(&tarball_path, &project_dir, &extraction_opts)?;
-
-        // by convention, a tarball for a package pkg:cargo/crate@x.y.z
-        // will extract to a crate-x.y.z folder
-        let extraction_path = format!("{}-{}", target_package.name, target_package.version);
-        let output_dir = project_dir.join(extraction_path);
-
-        // we remove the downloaded tarball after
-        fs::remove_file(tarball_path).context("failed to remove tarball")?;
-
-        log::info!("[pollux.cargo] downloaded and extracted files for {}", &target_package);
-        Ok(output_dir)
     }
 }
 
@@ -174,7 +103,7 @@ impl LocalProjectDependenciesResolver {
 #[cfg(test)]
 mod tests {
     use crate::core::models::CargoPackage;
-    use crate::infra::networking::crates::cargo::LocalProjectDependenciesResolver;
+    use crate::infra::networking::crates::resolvers::LocalProjectDependenciesResolver;
     use assertor::EqualityAssertion;
     use std::fs;
     use temp_dir::TempDir;

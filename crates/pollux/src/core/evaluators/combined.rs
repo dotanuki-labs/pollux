@@ -32,7 +32,7 @@ impl CombinedVeracityEvaluator {
         let has_provenance = self.provenance.evaluate(crate_info).await?;
 
         let veracity_level = CrateVeracityLevel::from_booleans(has_provenance, has_reproduced_build);
-        self.cache.save(crate_info, veracity_level.clone())?;
+        self.cache.save_evaluation(crate_info, veracity_level.clone())?;
         Ok(veracity_level)
     }
 
@@ -48,7 +48,7 @@ impl CombinedVeracityEvaluator {
 
         let new_veracity_level = match found_additional_factor {
             true => {
-                self.cache.save(crate_info, CrateVeracityLevel::TwoFactors)?;
+                self.cache.save_evaluation(crate_info, CrateVeracityLevel::TwoFactors)?;
                 CrateVeracityLevel::TwoFactors
             },
             false => CrateVeracityLevel::SingleFactor(existing_factor),
@@ -60,7 +60,7 @@ impl CombinedVeracityEvaluator {
 
 impl CrateVeracityLevelEvaluation for CombinedVeracityEvaluator {
     async fn evaluate(&self, cargo_package: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
-        let cached_veracity = self.cache.read(cargo_package).unwrap_or(NotAvailable);
+        let cached_veracity = self.cache.retrieve_evaluation(cargo_package).unwrap_or(NotAvailable);
 
         let new_evaluation = match &cached_veracity {
             CrateVeracityLevel::NotAvailable => self.evaluate_two_veracity_factors(cargo_package).await,

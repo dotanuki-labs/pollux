@@ -4,10 +4,11 @@
 use std::env::home_dir;
 use std::path::{Path, PathBuf};
 
-pub mod filesystem;
+pub mod evaluations;
 
 static CACHE_FOLDER_EVALUATIONS: &str = "evaluations";
 static CACHE_FOLDER_PACKAGES: &str = "packages";
+static TEMP_DOWNLOADS_FOLDER: &str = "downloads";
 
 pub struct CacheManager {
     cache_dir: PathBuf,
@@ -20,6 +21,10 @@ impl CacheManager {
             Some(dir) => dir.join(".pollux"),
         };
         Self { cache_dir }
+    }
+
+    pub fn temporary_downloads_dir(&self) -> PathBuf {
+        self.cache_dir.join(TEMP_DOWNLOADS_FOLDER)
     }
 
     pub fn evaluations_cache_dir(&self) -> PathBuf {

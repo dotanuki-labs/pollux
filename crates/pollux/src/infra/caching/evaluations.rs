@@ -16,11 +16,11 @@ struct CachedVeracityInfo {
     reproducibility: bool,
 }
 
-pub struct DirectoryBased {
+pub struct VeracityEvaluationsCache {
     cache_manager: CacheManager,
 }
 
-impl DirectoryBased {
+impl VeracityEvaluationsCache {
     pub fn new(cache_manager: CacheManager) -> Self {
         Self { cache_manager }
     }
@@ -33,8 +33,8 @@ impl DirectoryBased {
     }
 }
 
-impl VeracityEvaluationStorage for DirectoryBased {
-    fn read(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
+impl VeracityEvaluationStorage for VeracityEvaluationsCache {
+    fn retrieve_evaluation(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
         let destination_dir = self.data_dir(crate_info);
         let cache_file = destination_dir.join(VERACITY_CHECKS_FILE_NAME);
 
@@ -50,7 +50,7 @@ impl VeracityEvaluationStorage for DirectoryBased {
         Ok(veracity_level)
     }
 
-    fn save(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
+    fn save_evaluation(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
         let destination_dir = self.data_dir(crate_info);
         let cache_file = destination_dir.join(VERACITY_CHECKS_FILE_NAME);
 
