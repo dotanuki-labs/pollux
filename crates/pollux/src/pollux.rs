@@ -5,6 +5,7 @@ pub mod actors;
 
 use crate::core::interfaces::PackagesResolution;
 use crate::core::models::{CargoPackage, PolluxResults};
+use crate::infra::caching::CacheManager;
 use crate::infra::networking::crates::cargo::DependenciesResolver;
 use crate::ioc::MILLIS_TO_WAIT_AFTER_RATE_LIMITED;
 use crate::pollux::actors::PolluxEvaluatorActor;
@@ -26,16 +27,19 @@ pub enum PolluxMessage {
 }
 
 pub struct Pollux {
+    cache_manager: CacheManager,
     dependencies_resolver: DependenciesResolver,
     pollux_actor_factory: fn() -> PolluxEvaluatorActor,
 }
 
 impl Pollux {
     pub fn new(
+        cache_manager: CacheManager,
         dependencies_resolver: DependenciesResolver,
         pollux_evaluator_factory: fn() -> PolluxEvaluatorActor,
     ) -> Self {
         Self {
+            cache_manager,
             dependencies_resolver,
             pollux_actor_factory: pollux_evaluator_factory,
         }
@@ -59,12 +63,19 @@ impl Pollux {
         self.evaluate_packages(cargo_packages).await
     }
 
-    pub fn cleanup_cached_evaluations(&self) -> anyhow::Result<()> {
-        Ok(())
+    pub fn cleanup_cached_evaluations(&self) {
+        self.cache_manager.cleanup_evaluations();
+        println!("Cached evaluations removed with success!");
     }
 
-    pub fn cleanup_cached_packages(&self) -> anyhow::Result<()> {
-        Ok(())
+    pub fn cleanup_cached_packages(&self) {
+        self.cache_manager.cleanup_packages();
+        println!("Cached packages removed with success!");
+    }
+
+    pub fn cleanup_everything(&self) {
+        self.cache_manager.cleanup_all();
+        println!("All caches removed with success!");
     }
 
     async fn evaluate_packages(&self, cargo_packages: Vec<CargoPackage>) -> anyhow::Result<()> {

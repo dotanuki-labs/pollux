@@ -5,6 +5,7 @@ use crate::core::evaluators::combined::CombinedVeracityEvaluator;
 use crate::core::evaluators::standalone::{
     BuildReproducibilityEvaluator, CachedExecutionEvaluator, CrateProvenanceEvaluator,
 };
+use crate::infra::caching::CacheManager;
 use crate::infra::caching::filesystem::DirectoryBased;
 use crate::infra::networking::crates::CratesDotIOClient;
 use crate::infra::networking::crates::cargo::{CrateArchiveDownloader, DependenciesResolver};
@@ -14,20 +15,11 @@ use crate::infra::networking::ossrebuild::OssRebuildEvaluator;
 use crate::infra::networking::{crates, ossrebuild};
 use crate::pollux::Pollux;
 use crate::pollux::actors::PolluxEvaluatorActor;
-use std::env::home_dir;
-use std::path::PathBuf;
 
 pub static MILLIS_TO_WAIT_AFTER_RATE_LIMITED: u64 = 1100;
 
-fn cache_folder() -> PathBuf {
-    match home_dir() {
-        None => PathBuf::from("/var/cache"),
-        Some(dir) => dir.join(".pollux"),
-    }
-}
-
 fn cached_evaluator() -> CachedExecutionEvaluator {
-    let delegate = DirectoryBased::new(cache_folder());
+    let delegate = DirectoryBased::new(CacheManager::get());
     CachedExecutionEvaluator::FileSystem(delegate)
 }
 
@@ -58,10 +50,10 @@ fn pollux_evaluator() -> PolluxEvaluatorActor {
 }
 
 fn dependencies_resolver() -> DependenciesResolver {
-    let downloader = CrateArchiveDownloader::new(cratesio_client(), cache_folder());
+    let downloader = CrateArchiveDownloader::new(cratesio_client(), CacheManager::get());
     DependenciesResolver::new(downloader)
 }
 
 pub fn create_pollux() -> Pollux {
-    Pollux::new(dependencies_resolver(), pollux_evaluator)
+    Pollux::new(CacheManager::get(), dependencies_resolver(), pollux_evaluator)
 }

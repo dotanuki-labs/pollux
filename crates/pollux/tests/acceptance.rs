@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 use assert_cmd::Command;
+use assertor::BooleanAssertion;
 use predicates::str::contains;
+use std::env::home_dir;
 use std::fs;
 use temp_dir::TempDir;
 
@@ -61,4 +63,33 @@ fn should_verify_project_from_package_purl() {
         .success()
         .stdout(contains("total packages evaluated : 6"))
         .stdout(contains("pkg:cargo/proc-macro2@1.0.101 | veracity factors = none"));
+}
+
+#[test]
+fn should_cleanup_caches() {
+    let lockfile_contents = r#"
+            version = 3
+
+            [[package]]
+            name = "arbitrary"
+            version = "1.4.1"
+            source = "registry+https://github.com/rust-lang/crates.io-index"
+            checksum = "dde20b3d026af13f561bdd0f15edf01fc734f0dafcedbaf42bba506a9517f223"
+        "#;
+
+    let cargo_project = TempDir::new().expect("Cant create temp dir");
+
+    let lockfile_path = cargo_project.path().join("Cargo.lock");
+    fs::write(&lockfile_path, lockfile_contents).expect("failed to cargo manifest file");
+
+    sut()
+        .args(["evaluate", "project", cargo_project.path().to_str().unwrap()])
+        .assert()
+        .success();
+
+    sut().args(["cleanup", "everything"]).assert().success();
+
+    let cache_folder = home_dir().unwrap().join(".pollux");
+
+    assertor::assert_that!(cache_folder.exists()).is_false()
 }

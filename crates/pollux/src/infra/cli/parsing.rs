@@ -17,8 +17,8 @@ enum EvaluationSubject {
 #[derive(ValueEnum, Debug, Clone)]
 pub enum CleanupScope {
     Everything,
-    OnlyCachedEvaluations,
-    OnlyCachedPackages,
+    Evaluations,
+    Packages,
 }
 
 #[derive(Args, Debug)]
@@ -75,8 +75,8 @@ pub fn parse_arguments() -> anyhow::Result<PolluxTask> {
         },
         MainCommands::Cleanup(args) => match args.mode {
             CleanupScope::Everything => PolluxTask::CleanupEverything,
-            CleanupScope::OnlyCachedEvaluations => PolluxTask::CleanupEvaluations,
-            CleanupScope::OnlyCachedPackages => PolluxTask::CleanupPackages,
+            CleanupScope::Evaluations => PolluxTask::CleanupEvaluations,
+            CleanupScope::Packages => PolluxTask::CleanupPackages,
         },
     };
 
