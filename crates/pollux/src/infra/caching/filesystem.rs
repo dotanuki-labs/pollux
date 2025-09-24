@@ -3,11 +3,11 @@
 
 use crate::core::interfaces::VeracityEvaluationStorage;
 use crate::core::models::{CargoPackage, CrateVeracityLevel};
+use crate::infra::caching::CacheManager;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 static VERACITY_CHECKS_FILE_NAME: &str = "checks.json";
-static VERACITY_CHECKS_CACHE_FOLDER: &str = "cache";
 
 #[derive(Debug, Serialize, Deserialize)]
 struct CachedVeracityInfo {
@@ -17,17 +17,17 @@ struct CachedVeracityInfo {
 }
 
 pub struct DirectoryBased {
-    cache_dir: PathBuf,
+    cache_manager: CacheManager,
 }
 
 impl DirectoryBased {
-    pub fn new(cache_dir: PathBuf) -> Self {
-        Self { cache_dir }
+    pub fn new(cache_manager: CacheManager) -> Self {
+        Self { cache_manager }
     }
 
     fn data_dir(&self, crate_info: &CargoPackage) -> PathBuf {
-        self.cache_dir
-            .join(VERACITY_CHECKS_CACHE_FOLDER)
+        self.cache_manager
+            .evaluations_cache_dir()
             .join(&crate_info.name)
             .join(&crate_info.version)
     }

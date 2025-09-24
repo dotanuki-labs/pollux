@@ -3,6 +3,7 @@
 
 use crate::core::interfaces::PackagesResolution;
 use crate::core::models::CargoPackage;
+use crate::infra::caching::CacheManager;
 use crate::infra::networking::crates::CratesDotIOClient;
 use anyhow::{Context, bail};
 use cargo_lock::Lockfile;
@@ -11,7 +12,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-static CRATE_SOURCES_DOWNLOAD_FOLDER: &str = "downloads";
+static CRATE_SOURCES_DOWNLOAD_FOLDER: &str = "packages";
 
 pub struct DependenciesResolver {
     crate_downloader: CrateArchiveDownloader,
@@ -38,14 +39,14 @@ impl PackagesResolution for DependenciesResolver {
 
 pub struct CrateArchiveDownloader {
     cratesio_client: CratesDotIOClient,
-    cache_dir: PathBuf,
+    cache_manager: CacheManager,
 }
 
 impl CrateArchiveDownloader {
-    pub fn new(cratesio_client: CratesDotIOClient, cache_dir: PathBuf) -> Self {
+    pub fn new(cratesio_client: CratesDotIOClient, cache_manager: CacheManager) -> Self {
         Self {
             cratesio_client,
-            cache_dir,
+            cache_manager,
         }
     }
 
@@ -58,7 +59,8 @@ impl CrateArchiveDownloader {
             .await?;
 
         let project_dir = self
-            .cache_dir
+            .cache_manager
+            .packages_cache_dir()
             .join(CRATE_SOURCES_DOWNLOAD_FOLDER)
             .join(&target_package.name);
 

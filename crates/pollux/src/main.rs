@@ -24,12 +24,9 @@ async fn main() -> anyhow::Result<()> {
     match task {
         EvaluateRustProject(project_root) => pollux.evaluate_local_project(project_root.as_path()).await?,
         EvaluateRustCrate(cargo_package) => pollux.evaluate_crate_package(&cargo_package).await?,
-        CleanupEverything => {
-            pollux.cleanup_cached_evaluations()?;
-            pollux.cleanup_cached_packages()?;
-        },
-        CleanupPackages => pollux.cleanup_cached_packages()?,
-        CleanupEvaluations => pollux.cleanup_cached_evaluations()?,
+        CleanupEverything => pollux.cleanup_everything(),
+        CleanupPackages => pollux.cleanup_cached_packages(),
+        CleanupEvaluations => pollux.cleanup_cached_evaluations(),
     }
 
     Ok(())
