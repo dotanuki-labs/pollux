@@ -12,8 +12,8 @@ use crate::infra::networking::crates::registry::OfficialCratesRegistryEvaluator;
 use crate::infra::networking::http::HTTP_CLIENT;
 use crate::infra::networking::ossrebuild::OssRebuildEvaluator;
 use crate::infra::networking::{crates, ossrebuild};
+use crate::pollux::Pollux;
 use crate::pollux::actors::PolluxEvaluatorActor;
-use crate::pollux::{Pollux, PolluxTask};
 use std::env::home_dir;
 use std::path::PathBuf;
 
@@ -53,18 +53,15 @@ fn veracity_evaluator() -> CombinedVeracityEvaluator {
     CombinedVeracityEvaluator::new(cached_evaluator(), provenance_evaluator(), reproducibility_evaluator())
 }
 
-pub fn create_pollux(task: PolluxTask) -> Pollux {
-    match task {
-        PolluxTask::EvaluateRustProject(project_root) => {
-            let dependencies_resolver = DependenciesResolver::LocalRustProject { project_root };
-            let pollux_executor = PolluxEvaluatorActor::new(veracity_evaluator());
-            Pollux::new(dependencies_resolver, pollux_executor)
-        },
-        PolluxTask::EvaluateRustCrate(cargo_package) => {
-            let crate_downloader = CrateArchiveDownloader::new(cratesio_client(), cache_folder(), cargo_package);
-            let dependencies_resolver = DependenciesResolver::StandaloneCargoPackage { crate_downloader };
-            let pollux_executor = PolluxEvaluatorActor::new(veracity_evaluator());
-            Pollux::new(dependencies_resolver, pollux_executor)
-        },
-    }
+fn pollux_evaluator() -> PolluxEvaluatorActor {
+    PolluxEvaluatorActor::new(veracity_evaluator())
+}
+
+fn dependencies_resolver() -> DependenciesResolver {
+    let downloader = CrateArchiveDownloader::new(cratesio_client(), cache_folder());
+    DependenciesResolver::new(downloader)
+}
+
+pub fn create_pollux() -> Pollux {
+    Pollux::new(dependencies_resolver(), pollux_evaluator)
 }
