@@ -8,68 +8,68 @@ use anyhow::{Context, bail};
 use cargo_lock::Lockfile;
 use decompress::{Decompressor, ExtractOptsBuilder, decompressors};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 static CRATE_SOURCES_DOWNLOAD_FOLDER: &str = "downloads";
 
-pub enum DependenciesResolver {
-    StandaloneCargoPackage { crate_downloader: CrateArchiveDownloader },
-    LocalRustProject { project_root: PathBuf },
+pub struct DependenciesResolver {
+    crate_downloader: CrateArchiveDownloader,
+}
+
+impl DependenciesResolver {
+    pub fn new(crate_downloader: CrateArchiveDownloader) -> Self {
+        Self { crate_downloader }
+    }
 }
 
 impl PackagesResolution for DependenciesResolver {
-    async fn resolve(self) -> anyhow::Result<Vec<CargoPackage>> {
-        match self {
-            DependenciesResolver::StandaloneCargoPackage { crate_downloader } => {
-                let download_path = crate_downloader.download_extract().await?;
-                let local_resolver = LocalProjectDependenciesResolver::new(download_path);
-                local_resolver.resolve().await
-            },
-            DependenciesResolver::LocalRustProject { project_root } => {
-                let local_resolver = LocalProjectDependenciesResolver::new(project_root);
-                local_resolver.resolve().await
-            },
-        }
+    async fn resolve_for_local_project(&self, project_path: &Path) -> anyhow::Result<Vec<CargoPackage>> {
+        let local_resolver = LocalProjectDependenciesResolver::new(project_path.to_path_buf());
+        local_resolver.resolve().await
+    }
+
+    async fn resolve_for_crate_package(&self, cargo_package: &CargoPackage) -> anyhow::Result<Vec<CargoPackage>> {
+        let download_path = self.crate_downloader.download_extract(cargo_package).await?;
+        let local_resolver = LocalProjectDependenciesResolver::new(download_path);
+        local_resolver.resolve().await
     }
 }
 
 pub struct CrateArchiveDownloader {
     cratesio_client: CratesDotIOClient,
     cache_dir: PathBuf,
-    target_package: CargoPackage,
 }
 
 impl CrateArchiveDownloader {
-    pub fn new(cratesio_client: CratesDotIOClient, cache_dir: PathBuf, target_package: CargoPackage) -> Self {
+    pub fn new(cratesio_client: CratesDotIOClient, cache_dir: PathBuf) -> Self {
         Self {
             cratesio_client,
             cache_dir,
-            target_package,
         }
     }
 
-    async fn download_extract(&self) -> anyhow::Result<PathBuf> {
-        log::info!("[pollux.cargo] downloading package : {}", self.target_package.name);
+    async fn download_extract(&self, target_package: &CargoPackage) -> anyhow::Result<PathBuf> {
+        log::info!("[pollux.cargo] downloading package : {}", target_package.name);
 
         let downloaded = self
             .cratesio_client
-            .get_crate_tarball(&self.target_package.name, &self.target_package.version)
+            .get_crate_tarball(&target_package.name, &target_package.version)
             .await?;
 
         let project_dir = self
             .cache_dir
             .join(CRATE_SOURCES_DOWNLOAD_FOLDER)
-            .join(&self.target_package.name);
+            .join(&target_package.name);
 
         match fs::remove_dir_all(&project_dir) {
             Ok(_) => log::info!(
                 "[pollux.cargo] removed previous downloaded archive for {}",
-                &self.target_package
+                &target_package
             ),
             Err(_) => log::info!(
                 "[pollux.cargo] cannot remove previous downloaded archive for : {}",
-                &self.target_package
+                &target_package
             ),
         };
 
@@ -77,7 +77,7 @@ impl CrateArchiveDownloader {
         let tarball_path = project_dir.join("crate.tar.gz");
         fs::write(&tarball_path, downloaded).context("failed to save crate archive")?;
 
-        log::info!("[pollux.cargo] decompressing package : {}", &self.target_package);
+        log::info!("[pollux.cargo] decompressing package : {}", &target_package);
 
         // we levaregate the targz format as per what similar crates like
         // https://crates.io/crates/crate_untar also do
@@ -87,16 +87,13 @@ impl CrateArchiveDownloader {
 
         // by convention, a tarball for a package pkg:cargo/crate@x.y.z
         // will extract to a crate-x.y.z folder
-        let extraction_path = format!("{}-{}", self.target_package.name, self.target_package.version);
+        let extraction_path = format!("{}-{}", target_package.name, target_package.version);
         let output_dir = project_dir.join(extraction_path);
 
         // we remove the downloaded tarball after
         fs::remove_file(tarball_path).context("failed to remove tarball")?;
 
-        log::info!(
-            "[pollux.cargo] downloaded and extracted files for {}",
-            &self.target_package
-        );
+        log::info!("[pollux.cargo] downloaded and extracted files for {}", &target_package);
         Ok(output_dir)
     }
 }

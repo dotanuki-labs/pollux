@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::interfaces::VeracityEvaluation;
+use crate::core::interfaces::VeracityFactorEvaluation;
 use crate::core::models::CargoPackage;
 use crate::infra::networking::crates::CratesDotIOClient;
 
@@ -15,7 +15,7 @@ impl OfficialCratesRegistryEvaluator {
     }
 }
 
-impl VeracityEvaluation for OfficialCratesRegistryEvaluator {
+impl VeracityFactorEvaluation for OfficialCratesRegistryEvaluator {
     async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
         let has_provenance = self
             .cratesio_client
@@ -34,7 +34,7 @@ impl VeracityEvaluation for OfficialCratesRegistryEvaluator {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::interfaces::VeracityEvaluation;
+    use crate::core::interfaces::VeracityFactorEvaluation;
     use crate::core::models::CargoPackage;
     use crate::infra::networking::crates::CratesDotIOClient;
     use crate::infra::networking::crates::registry::OfficialCratesRegistryEvaluator;

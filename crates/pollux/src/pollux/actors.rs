@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::core::evaluators::combined::CombinedVeracityEvaluator;
-use crate::core::interfaces::CrateVeracityEvaluation;
+use crate::core::interfaces::CrateVeracityLevelEvaluation;
 use crate::core::models::{CrateVeracityLevel, EvaluationOutcome, PolluxResults, PolluxStatistics};
 use crate::pollux::PolluxMessage;
 use ractor::{Actor, ActorProcessingErr, ActorRef};

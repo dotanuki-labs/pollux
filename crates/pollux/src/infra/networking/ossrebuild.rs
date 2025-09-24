@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::interfaces::VeracityEvaluation;
+use crate::core::interfaces::VeracityFactorEvaluation;
 use crate::core::models::CargoPackage;
 use crate::infra::networking::http::HTTPClient;
 use anyhow::bail;
@@ -21,7 +21,7 @@ impl OssRebuildEvaluator {
     }
 }
 
-impl VeracityEvaluation for OssRebuildEvaluator {
+impl VeracityFactorEvaluation for OssRebuildEvaluator {
     async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
         let endpoint = format!(
             "{}/{}/{}/{}-{}.crate/rebuild.intoto.jsonl",
@@ -55,7 +55,7 @@ impl VeracityEvaluation for OssRebuildEvaluator {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::interfaces::VeracityEvaluation;
+    use crate::core::interfaces::VeracityFactorEvaluation;
     use crate::core::models::CargoPackage;
     use crate::infra::networking::http::{HTTP_CLIENT, MAX_HTTP_RETRY_ATTEMPTS};
     use crate::infra::networking::ossrebuild::OssRebuildEvaluator;

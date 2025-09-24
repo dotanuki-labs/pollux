@@ -4,7 +4,7 @@
 use crate::core::evaluators::standalone::{
     BuildReproducibilityEvaluator, CachedExecutionEvaluator, CrateProvenanceEvaluator,
 };
-use crate::core::interfaces::{CrateVeracityEvaluation, VeracityEvaluation, VeracityEvaluationStorage};
+use crate::core::interfaces::{CrateVeracityLevelEvaluation, VeracityEvaluationStorage, VeracityFactorEvaluation};
 use crate::core::models::CrateVeracityLevel::NotAvailable;
 use crate::core::models::{CargoPackage, CrateVeracityLevel, VeracityFactor};
 
@@ -58,7 +58,7 @@ impl CombinedVeracityEvaluator {
     }
 }
 
-impl CrateVeracityEvaluation for CombinedVeracityEvaluator {
+impl CrateVeracityLevelEvaluation for CombinedVeracityEvaluator {
     async fn evaluate(&self, cargo_package: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
         let cached_veracity = self.cache.read(cargo_package).unwrap_or(NotAvailable);
 
@@ -91,7 +91,7 @@ mod tests {
     use crate::core::evaluators::standalone::{
         BuildReproducibilityEvaluator, CachedExecutionEvaluator, CrateProvenanceEvaluator, FakeVeracityEvaluator,
     };
-    use crate::core::interfaces::CrateVeracityEvaluation;
+    use crate::core::interfaces::CrateVeracityLevelEvaluation;
     use crate::core::models::{CargoPackage, CrateVeracityLevel, VeracityFactor};
     use assertor::{BooleanAssertion, EqualityAssertion};
     use std::collections::HashMap;

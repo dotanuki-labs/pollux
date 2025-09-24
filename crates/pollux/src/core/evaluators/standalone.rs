@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::interfaces::{VeracityEvaluation, VeracityEvaluationStorage};
+use crate::core::interfaces::{VeracityEvaluationStorage, VeracityFactorEvaluation};
 use crate::core::models::{CargoPackage, CrateVeracityLevel};
 use crate::infra::caching::filesystem::DirectoryBased;
 use crate::infra::networking::crates::registry::OfficialCratesRegistryEvaluator;
@@ -15,7 +15,7 @@ pub enum CrateProvenanceEvaluator {
     FakeRegistry(FakeVeracityEvaluator),
 }
 
-impl VeracityEvaluation for CrateProvenanceEvaluator {
+impl VeracityFactorEvaluation for CrateProvenanceEvaluator {
     async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
         match self {
             CrateProvenanceEvaluator::CratesOfficialRegistry(delegate) => delegate.evaluate(crate_info).await,
@@ -31,7 +31,7 @@ pub enum BuildReproducibilityEvaluator {
     FakeRebuilder(FakeVeracityEvaluator),
 }
 
-impl VeracityEvaluation for BuildReproducibilityEvaluator {
+impl VeracityFactorEvaluation for BuildReproducibilityEvaluator {
     async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
         match self {
             BuildReproducibilityEvaluator::GoogleOssRebuild(delegate) => delegate.evaluate(crate_info).await,
@@ -75,7 +75,7 @@ impl VeracityEvaluationStorage for CachedExecutionEvaluator {
 pub struct FakeVeracityEvaluator(pub Vec<CargoPackage>);
 
 #[cfg(test)]
-impl VeracityEvaluation for FakeVeracityEvaluator {
+impl VeracityFactorEvaluation for FakeVeracityEvaluator {
     async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
         Ok(self.0.contains(crate_info))
     }

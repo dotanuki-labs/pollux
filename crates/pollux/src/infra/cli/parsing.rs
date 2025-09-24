@@ -14,6 +14,13 @@ enum EvaluationSubject {
     Crate,
 }
 
+#[derive(ValueEnum, Debug, Clone)]
+pub enum CleanupScope {
+    Everything,
+    OnlyCachedEvaluations,
+    OnlyCachedPackages,
+}
+
 #[derive(Args, Debug)]
 #[command(version, about, long_about = None)]
 struct EvaluateArguments {
@@ -23,6 +30,14 @@ struct EvaluateArguments {
 
     /// Filesystem path or crate package purl
     pub input: String,
+}
+
+#[derive(Args, Debug)]
+#[command(version, about, long_about = None)]
+struct CleanupArguments {
+    /// Define the scope of cached data to remove
+    #[arg(value_enum)]
+    pub mode: CleanupScope,
 }
 
 #[derive(Parser)]
@@ -35,8 +50,10 @@ struct CliParser {
 
 #[derive(Subcommand)]
 enum MainCommands {
-    /// Evaluate veracity for a target Rust project
+    /// Evaluate veracity for a target Rust project or crate
     Evaluate(EvaluateArguments),
+    /// Clean up existing cached data used by this tool
+    Cleanup(CleanupArguments),
 }
 
 pub fn parse_arguments() -> anyhow::Result<PolluxTask> {
@@ -55,6 +72,11 @@ pub fn parse_arguments() -> anyhow::Result<PolluxTask> {
                 let cargo_package = CargoPackage::try_from(args.input)?;
                 PolluxTask::EvaluateRustCrate(cargo_package)
             },
+        },
+        MainCommands::Cleanup(args) => match args.mode {
+            CleanupScope::Everything => PolluxTask::CleanupEverything,
+            CleanupScope::OnlyCachedEvaluations => PolluxTask::CleanupEvaluations,
+            CleanupScope::OnlyCachedPackages => PolluxTask::CleanupPackages,
         },
     };
 

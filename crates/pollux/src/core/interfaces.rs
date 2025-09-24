@@ -2,20 +2,22 @@
 // SPDX-License-Identifier: MIT
 
 use crate::core::models::{CargoPackage, CrateVeracityLevel};
+use std::path::Path;
 
-pub trait VeracityEvaluation {
-    async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool>;
+pub trait VeracityFactorEvaluation {
+    async fn evaluate(&self, cargo_package: &CargoPackage) -> anyhow::Result<bool>;
 }
 
-pub trait CrateVeracityEvaluation {
-    async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel>;
+pub trait CrateVeracityLevelEvaluation {
+    async fn evaluate(&self, cargo_package: &CargoPackage) -> anyhow::Result<CrateVeracityLevel>;
 }
 
 pub trait VeracityEvaluationStorage {
-    fn read(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel>;
-    fn save(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()>;
+    fn read(&self, cargo_package: &CargoPackage) -> anyhow::Result<CrateVeracityLevel>;
+    fn save(&self, cargo_package: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()>;
 }
 
 pub trait PackagesResolution {
-    async fn resolve(self) -> anyhow::Result<Vec<CargoPackage>>;
+    async fn resolve_for_local_project(&self, project_path: &Path) -> anyhow::Result<Vec<CargoPackage>>;
+    async fn resolve_for_crate_package(&self, cargo_package: &CargoPackage) -> anyhow::Result<Vec<CargoPackage>>;
 }
