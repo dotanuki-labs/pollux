@@ -12,6 +12,6 @@ pub trait CrateVeracityLevelEvaluation {
 }
 
 pub trait VeracityEvaluationStorage {
-    fn retrieve_evaluation(&self, cargo_package: &CargoPackage) -> anyhow::Result<CrateVeracityLevel>;
+    fn retrieve_evaluation(&self, cargo_package: &CargoPackage) -> anyhow::Result<Option<CrateVeracityLevel>>;
     fn save_evaluation(&self, cargo_package: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()>;
 }
