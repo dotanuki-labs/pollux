@@ -48,14 +48,11 @@ pub enum CachedExecutionEvaluator {
 }
 
 impl VeracityEvaluationStorage for CachedExecutionEvaluator {
-    fn retrieve_evaluation(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
+    fn retrieve_evaluation(&self, crate_info: &CargoPackage) -> anyhow::Result<Option<CrateVeracityLevel>> {
         match self {
             CachedExecutionEvaluator::FileSystem(delegate) => delegate.retrieve_evaluation(crate_info),
             #[cfg(test)]
-            CachedExecutionEvaluator::FakeCache(fakes) => Ok(fakes
-                .get(&crate_info.name)
-                .cloned()
-                .unwrap_or(CrateVeracityLevel::NotAvailable)),
+            CachedExecutionEvaluator::FakeCache(fakes) => Ok(fakes.get(&crate_info.name).cloned()),
         }
     }
 

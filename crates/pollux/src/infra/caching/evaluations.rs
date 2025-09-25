@@ -34,20 +34,20 @@ impl VeracityEvaluationsCache {
 }
 
 impl VeracityEvaluationStorage for VeracityEvaluationsCache {
-    fn retrieve_evaluation(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
+    fn retrieve_evaluation(&self, crate_info: &CargoPackage) -> anyhow::Result<Option<CrateVeracityLevel>> {
         let destination_dir = self.data_dir(crate_info);
         let cache_file = destination_dir.join(VERACITY_CHECKS_FILE_NAME);
 
         if !cache_file.exists() {
             log::info!("[pollux.cache] {:?} not found", destination_dir);
-            return Ok(CrateVeracityLevel::NotAvailable);
+            return Ok(None);
         }
 
         log::info!("[pollux.cache] cache hit at {:?}", cache_file);
         let serialized = std::fs::read(cache_file)?;
         let info: CachedVeracityInfo = serde_json::from_slice(&serialized)?;
         let veracity_level = CrateVeracityLevel::from_booleans(info.provenance, info.reproducibility);
-        Ok(veracity_level)
+        Ok(Some(veracity_level))
     }
 
     fn save_evaluation(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
