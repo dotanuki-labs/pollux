@@ -60,10 +60,10 @@ impl Display for CrateVeracityLevel {
         match self {
             CrateVeracityLevel::NotAvailable => f.write_str("none"),
             CrateVeracityLevel::SingleFactor(factor) => match factor {
-                VeracityFactor::ReproducibleBuilds => f.write_str("one(reproducible builds)"),
-                VeracityFactor::ProvenanceAttested => f.write_str("one(provenance attested)"),
+                VeracityFactor::ReproducibleBuilds => f.write_str("reproducible builds"),
+                VeracityFactor::ProvenanceAttested => f.write_str("provenance attested"),
             },
-            CrateVeracityLevel::TwoFactors => f.write_str("two(provenance attested; reproducible builds)"),
+            CrateVeracityLevel::TwoFactors => f.write_str("provenance attested; reproducible builds"),
         }
     }
 }
@@ -92,13 +92,13 @@ impl CrateVeracityLevel {
 
 pub type EvaluationOutcome = (CargoPackage, Option<CrateVeracityLevel>);
 
-pub struct PolluxStatistics {
-    pub total_project_packages: usize,
-    pub with_veracity_level: usize,
-    pub without_veracity_level: usize,
+pub struct StatisticsForPackages {
+    pub total: usize,
+    pub provenance_attested: usize,
+    pub reproducible_builds: usize,
 }
 
 pub struct PolluxResults {
-    pub statistics: PolluxStatistics,
+    pub statistics: StatisticsForPackages,
     pub outcomes: Vec<EvaluationOutcome>,
 }

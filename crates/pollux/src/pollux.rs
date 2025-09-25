@@ -94,25 +94,25 @@ impl Pollux {
     fn show_evaluation_disclaimer(&self) {
         println!();
         println!("Evaluating veracity for packages. This operation may take some time ...");
-        println!();
     }
 
     fn show_evaluation_results(&self, results: &PolluxResults) {
         let statistics = &results.statistics;
         println!();
-        println!("Statistics: ");
-        println!("• total packages evaluated : {}", statistics.total_project_packages);
-        println!("• missing veracity factors : {}", statistics.without_veracity_level);
-        println!("• with existing factors : {}", statistics.with_veracity_level);
+        println!("Statistics : ");
         println!();
-        println!("Evaluations: ");
+        println!("• total packages evaluated : {}", statistics.total);
+        println!("• with provenance attested : {}", statistics.provenance_attested);
+        println!("• with reproducible builds : {}", statistics.reproducible_builds);
+        println!();
+        println!("Veracity factors : ");
         println!();
         results
             .outcomes
             .iter()
             .for_each(|(package, maybe_veracity_check)| match maybe_veracity_check {
                 Some(level) => {
-                    println!("• {} | veracity factors = {} ", package, style(level).cyan());
+                    println!("• {} ({}) ", package, style(level).cyan());
                 },
                 None => {
                     println!("• {} : {}", package, style("failed to evaluate").red());

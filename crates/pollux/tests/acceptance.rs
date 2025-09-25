@@ -46,13 +46,9 @@ fn should_verify_project_from_path() {
         .assert()
         .success()
         .stdout(contains("total packages evaluated : 3"))
-        .stdout(contains("pkg:cargo/arbitrary@1.4.1 | veracity factors = none"))
-        .stdout(contains(
-            "pkg:cargo/find-msvc-tools@0.1.1 | veracity factors = one(provenance attested)",
-        ))
-        .stdout(contains(
-            "pkg:cargo/levenshtein@1.0.5 | veracity factors = one(reproducible builds)",
-        ));
+        .stdout(contains("pkg:cargo/arbitrary@1.4.1 (none)"))
+        .stdout(contains("pkg:cargo/find-msvc-tools@0.1.1 (provenance attested)"))
+        .stdout(contains("pkg:cargo/levenshtein@1.0.5 (reproducible builds)"));
 }
 
 #[test]
@@ -62,7 +58,7 @@ fn should_verify_project_from_package_purl() {
         .assert()
         .success()
         .stdout(contains("total packages evaluated : 6"))
-        .stdout(contains("pkg:cargo/proc-macro2@1.0.101 | veracity factors = none"));
+        .stdout(contains("pkg:cargo/proc-macro2@1.0.101 (none)"));
 }
 
 #[test]
