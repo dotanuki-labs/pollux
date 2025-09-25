@@ -28,7 +28,14 @@ struct EvaluateArguments {
     #[arg(value_enum)]
     pub subject: EvaluationSubject,
 
-    /// Filesystem path or crate package purl
+    /// Folder path or crate package url (purl) to evaluate
+    pub input: String,
+}
+
+#[derive(Args, Debug)]
+#[command(version, about, long_about = None)]
+struct CheckArguments {
+    /// Crate package url (purl) to check
     pub input: String,
 }
 
@@ -50,10 +57,12 @@ struct CliParser {
 
 #[derive(Subcommand)]
 enum MainCommands {
-    /// Evaluate veracity for a target Rust project or crate
-    Evaluate(EvaluateArguments),
+    /// Check existing veracity factor for a single package
+    Check(CheckArguments),
     /// Clean up existing cached data used by this tool
     Cleanup(CleanupArguments),
+    /// Evaluate veracity for a target Rust project or crate
+    Evaluate(EvaluateArguments),
 }
 
 pub fn parse_arguments() -> anyhow::Result<PolluxTask> {
@@ -77,6 +86,10 @@ pub fn parse_arguments() -> anyhow::Result<PolluxTask> {
             CleanupScope::Everything => PolluxTask::CleanupEverything,
             CleanupScope::Evaluations => PolluxTask::CleanupEvaluations,
             CleanupScope::Packages => PolluxTask::CleanupPackages,
+        },
+        MainCommands::Check(args) => {
+            let cargo_package = CargoPackage::try_from(args.input)?;
+            PolluxTask::CheckRustCrate(cargo_package)
         },
     };
 

@@ -13,7 +13,7 @@ fn sut() -> Command {
 }
 
 #[test]
-fn should_verify_project_from_path() {
+fn should_evaluate_project_from_path() {
     let lockfile_contents = r#"
             version = 3
 
@@ -52,13 +52,23 @@ fn should_verify_project_from_path() {
 }
 
 #[test]
-fn should_verify_project_from_package_purl() {
+fn should_evaluate_project_from_package_purl() {
     sut()
         .args(["evaluate", "crate", "pkg:cargo/serde@1.0.226"])
         .assert()
         .success()
         .stdout(contains("total packages evaluated : 6"))
         .stdout(contains("pkg:cargo/proc-macro2@1.0.101 (none)"));
+}
+
+#[test]
+fn should_check_standalone_package_purl() {
+    sut()
+        .args(["check", "pkg:cargo/bon@3.7.2"])
+        .assert()
+        .success()
+        .stdout(contains("provenance evidence (v3.7.2 via github)"))
+        .stdout(contains("reproducibility evidence : not found"));
 }
 
 #[test]
