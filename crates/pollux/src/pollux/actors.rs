@@ -3,7 +3,9 @@
 
 use crate::core::evaluators::combined::CombinedVeracityEvaluator;
 use crate::core::interfaces::CrateVeracityLevelEvaluation;
-use crate::core::models::{CrateVeracityLevel, EvaluationOutcome, PolluxResults, PolluxStatistics};
+use crate::core::models::{
+    CrateVeracityLevel, EvaluationOutcome, PolluxResults, StatisticsForPackages, VeracityFactor,
+};
 use crate::pollux::PolluxMessage;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 
@@ -30,40 +32,51 @@ impl Actor for PolluxEvaluatorActor {
         &self,
         _: ActorRef<Self::Msg>,
         message: Self::Msg,
-        packages: &mut Self::State,
+        outcomes: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match message {
             PolluxMessage::EvaluatePackage(cargo_package) => {
                 log::info!("[pollux.actor] starting evaluation for package {}", &cargo_package);
                 let maybe_evaluated = self.veracity_evaluator.evaluate(&cargo_package).await.ok();
                 log::info!("[pollux.actor] finished evaluation for package {}", &cargo_package);
-                packages.push((cargo_package, maybe_evaluated));
+                outcomes.push((cargo_package, maybe_evaluated));
             },
             PolluxMessage::AggregateResults(reply) => {
                 log::info!("[pollux.actor] computing aggregated results for processed packages");
 
-                let total_evaluated_packages = packages
-                    .iter()
-                    .filter(|(_, evaluation)| evaluation.is_some())
-                    .collect::<Vec<_>>()
-                    .len();
+                let mut total_evaluated_packages = 0;
+                let mut with_provenance = 0;
+                let mut with_reproducible_builds = 0;
 
-                let total_packages_with_veracity_level = packages
-                    .iter()
-                    .filter_map(|(_, evaluation)| evaluation.as_ref())
-                    .filter(|veracity_level| **veracity_level != CrateVeracityLevel::NotAvailable)
-                    .collect::<Vec<_>>()
-                    .len();
+                for (package, evaluation) in outcomes.iter() {
+                    total_evaluated_packages += 1;
 
-                let statistics = PolluxStatistics {
-                    total_project_packages: total_evaluated_packages,
-                    with_veracity_level: total_packages_with_veracity_level,
-                    without_veracity_level: total_evaluated_packages - total_packages_with_veracity_level,
+                    if let Some(level) = evaluation {
+                        match level {
+                            CrateVeracityLevel::NotAvailable => {
+                                log::info!("[pollux.actor] no stats for : {}", &package);
+                            },
+                            CrateVeracityLevel::SingleFactor(factor) => match factor {
+                                VeracityFactor::ReproducibleBuilds => with_reproducible_builds += 1,
+                                VeracityFactor::ProvenanceAttested => with_provenance += 1,
+                            },
+                            CrateVeracityLevel::TwoFactors => {
+                                with_reproducible_builds += 1;
+                                with_provenance += 1
+                            },
+                        }
+                    }
+                }
+
+                let statistics = StatisticsForPackages {
+                    total: total_evaluated_packages,
+                    provenance_attested: with_provenance,
+                    reproducible_builds: with_reproducible_builds,
                 };
 
                 let results = PolluxResults {
                     statistics,
-                    outcomes: packages.clone(),
+                    outcomes: outcomes.clone(),
                 };
 
                 if reply.send(results).is_err() {
