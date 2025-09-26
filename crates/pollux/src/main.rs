@@ -27,6 +27,7 @@ async fn main() -> anyhow::Result<()> {
         CleanupEverything => pollux.cleanup_everything(),
         CleanupPackages => pollux.cleanup_cached_packages(),
         CleanupEvaluations => pollux.cleanup_cached_evaluations(),
+        CheckRustCrate(cargo_package) => pollux.check_crate_package(&cargo_package).await?,
     }
 
     Ok(())

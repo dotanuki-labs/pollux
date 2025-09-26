@@ -1,8 +1,6 @@
 [advisories]
 ignore = [
-    "RUSTSEC-2022-0004", # bug on rustc-serialize
     "RUSTSEC-2024-0384", # instant is no longer maintened
-    "RUSTSEC-2025-0025", # rustc-serialize is unmaintained
     "RUSTSEC-2025-0052", # async-std is no longer maintened
 ]
 
@@ -11,7 +9,6 @@ confidence-threshold = 0.95
 allow = [
     "Apache-2.0",
     "BSD-3-Clause",
-    "CC0-1.0",
     "CDLA-Permissive-2.0",
     "MIT",
     "ISC",

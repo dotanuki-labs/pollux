@@ -89,16 +89,3 @@ impl CrateVeracityLevel {
         }
     }
 }
-
-pub type EvaluationOutcome = (CargoPackage, Option<CrateVeracityLevel>);
-
-pub struct StatisticsForPackages {
-    pub total: usize,
-    pub provenance_attested: usize,
-    pub reproducible_builds: usize,
-}
-
-pub struct PolluxResults {
-    pub statistics: StatisticsForPackages,
-    pub outcomes: Vec<EvaluationOutcome>,
-}

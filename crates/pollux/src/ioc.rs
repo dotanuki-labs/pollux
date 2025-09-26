@@ -15,7 +15,8 @@ use crate::infra::networking::http::HTTP_CLIENT;
 use crate::infra::networking::ossrebuild::OssRebuildEvaluator;
 use crate::infra::networking::{crates, ossrebuild};
 use crate::pollux::Pollux;
-use crate::pollux::actors::PolluxEvaluatorActor;
+use crate::pollux::actors::check::PolluxStandalonePackageChecker;
+use crate::pollux::actors::evaluation::PolluxEvaluatorActor;
 
 pub static MILLIS_TO_WAIT_AFTER_RATE_LIMITED: u64 = 1100;
 
@@ -56,5 +57,10 @@ fn dependencies_resolver() -> DependenciesResolver {
 }
 
 pub fn create_pollux() -> Pollux {
-    Pollux::new(CacheManager::get(), dependencies_resolver(), pollux_evaluator)
+    Pollux::new(
+        CacheManager::get(),
+        dependencies_resolver(),
+        pollux_evaluator,
+        PolluxStandalonePackageChecker::new(veracity_evaluator()),
+    )
 }
