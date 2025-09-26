@@ -133,7 +133,7 @@ mod tests {
 
         let evaluation = evaluator.evaluate(&crate_info).await;
 
-        mocked.assert_hits(MAX_HTTP_RETRY_ATTEMPTS as usize + 1);
+        mocked.assert_calls(MAX_HTTP_RETRY_ATTEMPTS as usize + 1);
         assertor::assert_that!(evaluation).is_err()
     }
 }
