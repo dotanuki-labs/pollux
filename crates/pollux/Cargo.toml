@@ -1,6 +1,6 @@
 [package]
 name = "pollux"
-description = "Analyse provenance and build reproducibility for Rust supply chains"
+description = "Get provenance and build reproducibility insights for your Rust supply chain"
 authors.workspace = true
 edition.workspace = true
 documentation.workspace = true
