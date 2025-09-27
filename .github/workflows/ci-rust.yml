@@ -117,7 +117,7 @@ jobs:
     runs-on: warp-ubuntu-2404-x64-4x
     services:
       local-registry:
-        image: ghcr.io/kellnr/kellnr:5@sha256:8c8478df4127c623a8f8a7e573c50e3c0beec062c7d9d90823b66c9c5dbc3646
+        image: ghcr.io/kellnr/kellnr:5@sha256:2a58332b562df3fab776a5cd56bf6a20dbdcc7bd0553090283012abb4bd9aed0
         ports:
           - 8000:8000
         options: >-
