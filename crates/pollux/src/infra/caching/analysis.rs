@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::interfaces::VeracityEvaluationStorage;
+use crate::core::interfaces::AnalyzedDataStorage;
 use crate::core::models::{CargoPackage, CrateVeracityLevel};
 use crate::infra::caching::CacheManager;
 use serde::{Deserialize, Serialize};
@@ -16,25 +16,25 @@ struct CachedVeracityInfo {
     reproducibility: bool,
 }
 
-pub struct VeracityEvaluationsCache {
+pub struct AnalysedPackagesCache {
     cache_manager: CacheManager,
 }
 
-impl VeracityEvaluationsCache {
+impl AnalysedPackagesCache {
     pub fn new(cache_manager: CacheManager) -> Self {
         Self { cache_manager }
     }
 
     fn data_dir(&self, crate_info: &CargoPackage) -> PathBuf {
         self.cache_manager
-            .evaluations_cache_dir()
+            .analysis_cache_dir()
             .join(&crate_info.name)
             .join(&crate_info.version)
     }
 }
 
-impl VeracityEvaluationStorage for VeracityEvaluationsCache {
-    fn retrieve_evaluation(&self, crate_info: &CargoPackage) -> anyhow::Result<Option<CrateVeracityLevel>> {
+impl AnalyzedDataStorage for AnalysedPackagesCache {
+    fn retrieve(&self, crate_info: &CargoPackage) -> anyhow::Result<Option<CrateVeracityLevel>> {
         let destination_dir = self.data_dir(crate_info);
         let cache_file = destination_dir.join(VERACITY_CHECKS_FILE_NAME);
 
@@ -50,7 +50,7 @@ impl VeracityEvaluationStorage for VeracityEvaluationsCache {
         Ok(Some(veracity_level))
     }
 
-    fn save_evaluation(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
+    fn save(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
         let destination_dir = self.data_dir(crate_info);
         let cache_file = destination_dir.join(VERACITY_CHECKS_FILE_NAME);
 

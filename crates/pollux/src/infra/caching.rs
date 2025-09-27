@@ -4,9 +4,9 @@
 use std::env::home_dir;
 use std::path::{Path, PathBuf};
 
-pub mod evaluations;
+pub mod analysis;
 
-static CACHE_FOLDER_EVALUATIONS: &str = "evaluations";
+static CACHE_FOLDER_ANALYSED: &str = "analysed";
 static CACHE_FOLDER_PACKAGES: &str = "packages";
 static TEMP_DOWNLOADS_FOLDER: &str = "downloads";
 
@@ -27,20 +27,20 @@ impl CacheManager {
         self.cache_dir.join(TEMP_DOWNLOADS_FOLDER)
     }
 
-    pub fn evaluations_cache_dir(&self) -> PathBuf {
-        self.cache_dir.join(CACHE_FOLDER_EVALUATIONS)
+    pub fn analysis_cache_dir(&self) -> PathBuf {
+        self.cache_dir.join(CACHE_FOLDER_ANALYSED)
     }
 
     pub fn packages_cache_dir(&self) -> PathBuf {
         self.cache_dir.join(CACHE_FOLDER_PACKAGES)
     }
 
-    pub fn cleanup_packages(&self) {
+    pub fn cleanup_cached_packages_sources(&self) {
         self.cleanup(self.packages_cache_dir().as_path());
     }
 
-    pub fn cleanup_evaluations(&self) {
-        self.cleanup(self.evaluations_cache_dir().as_path());
+    pub fn cleanup_cached_analysis(&self) {
+        self.cleanup(self.analysis_cache_dir().as_path());
     }
 
     pub fn cleanup_all(&self) {

@@ -1,23 +1,21 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::evaluators::standalone::{
-    BuildReproducibilityEvaluator, CachedExecutionEvaluator, CrateProvenanceEvaluator,
-};
-use crate::core::interfaces::{CrateVeracityLevelEvaluation, VeracityEvaluationStorage, VeracityFactorEvaluation};
+use crate::core::analysers::standalone::{BuildReproducibilityChecker, CachedDataChecker, CrateProvenanceChecker};
+use crate::core::interfaces::{AnalyzedDataStorage, CrateVeracityAnalysis, VeracityFactorCheck};
 use crate::core::models::{CargoPackage, CrateVeracityLevel, VeracityFactor};
 
-pub struct CombinedVeracityEvaluator {
-    cache: CachedExecutionEvaluator,
-    provenance: CrateProvenanceEvaluator,
-    reproducibility: BuildReproducibilityEvaluator,
+pub struct VeracityFactorsAnalyser {
+    cache: CachedDataChecker,
+    provenance: CrateProvenanceChecker,
+    reproducibility: BuildReproducibilityChecker,
 }
 
-impl CombinedVeracityEvaluator {
+impl VeracityFactorsAnalyser {
     pub fn new(
-        cache: CachedExecutionEvaluator,
-        provenance: CrateProvenanceEvaluator,
-        reproducibility: BuildReproducibilityEvaluator,
+        cache: CachedDataChecker,
+        provenance: CrateProvenanceChecker,
+        reproducibility: BuildReproducibilityChecker,
     ) -> Self {
         Self {
             cache,
@@ -26,63 +24,63 @@ impl CombinedVeracityEvaluator {
         }
     }
 
-    async fn evaluate_two_veracity_factors(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
-        let has_reproduced_build = self.reproducibility.evaluate(crate_info).await?;
-        let has_provenance = self.provenance.evaluate(crate_info).await?;
+    async fn analyse(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
+        let has_reproduced_build = self.reproducibility.execute(crate_info).await?;
+        let has_provenance = self.provenance.execute(crate_info).await?;
 
         let veracity_level = CrateVeracityLevel::from_booleans(has_provenance, has_reproduced_build);
-        self.cache.save_evaluation(crate_info, veracity_level.clone())?;
+        self.cache.save(crate_info, veracity_level.clone())?;
         Ok(veracity_level)
     }
 
-    async fn re_evaluate_reproducibility(
+    async fn re_check_reproducibility(
         &self,
         has_provenance: bool,
         cargo_package: &CargoPackage,
     ) -> anyhow::Result<CrateVeracityLevel> {
-        log::info!("[pollux.core] will re-evaluate reproducibility for {}", cargo_package);
-        let is_reproducible = self.reproducibility.evaluate(cargo_package).await?;
+        log::info!("[pollux.core] will re-check reproducibility for {}", cargo_package);
+        let is_reproducible = self.reproducibility.execute(cargo_package).await?;
         let new_veracity_level = CrateVeracityLevel::from_booleans(has_provenance, is_reproducible);
-        self.cache.save_evaluation(cargo_package, new_veracity_level.clone())?;
+        self.cache.save(cargo_package, new_veracity_level.clone())?;
         Ok(new_veracity_level)
     }
 }
 
-impl CrateVeracityLevelEvaluation for CombinedVeracityEvaluator {
-    async fn evaluate(&self, cargo_package: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
-        let Some(cached_veracity_level) = self.cache.retrieve_evaluation(cargo_package)? else {
-            return self.evaluate_two_veracity_factors(cargo_package).await;
+impl CrateVeracityAnalysis for VeracityFactorsAnalyser {
+    async fn execute(&self, cargo_package: &CargoPackage) -> anyhow::Result<CrateVeracityLevel> {
+        let Some(cached_veracity_level) = self.cache.retrieve(cargo_package)? else {
+            return self.analyse(cargo_package).await;
         };
 
-        let new_evaluation = match &cached_veracity_level {
-            CrateVeracityLevel::NotAvailable => self.re_evaluate_reproducibility(false, cargo_package).await,
+        let new_analysis = match &cached_veracity_level {
+            CrateVeracityLevel::NotAvailable => self.re_check_reproducibility(false, cargo_package).await,
             CrateVeracityLevel::SingleFactor(VeracityFactor::ProvenanceAttested) => {
-                self.re_evaluate_reproducibility(true, cargo_package).await
+                self.re_check_reproducibility(true, cargo_package).await
             },
             _ => Ok(cached_veracity_level.clone()),
         };
 
-        if new_evaluation.is_ok() {
-            return new_evaluation;
+        if new_analysis.is_ok() {
+            return new_analysis;
         }
 
         log::info!(
-            "[pollux.core] failed to evaluate {} | reason = {}; defaulting to cache",
+            "[pollux.core] failed to analyse {} | reason = {}; defaulting to cache",
             cargo_package,
-            new_evaluation.unwrap_err()
+            new_analysis.unwrap_err()
         );
-        log::info!("[pollux.core] using cached veracity evaluation for {}", cargo_package);
+        log::info!("[pollux.core] using cached veracity analysis for {}", cargo_package);
         Ok(cached_veracity_level)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::core::evaluators::combined::CombinedVeracityEvaluator;
-    use crate::core::evaluators::standalone::{
-        BuildReproducibilityEvaluator, CachedExecutionEvaluator, CrateProvenanceEvaluator, FakeVeracityEvaluator,
+    use crate::core::analysers::combined::VeracityFactorsAnalyser;
+    use crate::core::analysers::standalone::{
+        BuildReproducibilityChecker, CachedDataChecker, CrateProvenanceChecker, FakeVeracityChecker,
     };
-    use crate::core::interfaces::CrateVeracityLevelEvaluation;
+    use crate::core::interfaces::CrateVeracityAnalysis;
     use crate::core::models::{CargoPackage, CrateVeracityLevel, VeracityFactor};
     use assertor::{BooleanAssertion, EqualityAssertion};
     use std::collections::HashMap;
@@ -106,26 +104,26 @@ mod tests {
         }
     }
 
-    fn fake_provenance_evaluator(scenario: &CrateScenario) -> FakeVeracityEvaluator {
+    fn fake_provenance_checker(scenario: &CrateScenario) -> FakeVeracityChecker {
         if scenario.provenance {
             let info = CargoPackage::with(scenario.name, scenario.version);
-            FakeVeracityEvaluator(vec![info])
+            FakeVeracityChecker(vec![info])
         } else {
-            FakeVeracityEvaluator(vec![])
+            FakeVeracityChecker(vec![])
         }
     }
 
-    fn fake_reproducibility_evaluator(scenario: &CrateScenario) -> FakeVeracityEvaluator {
+    fn fake_reproducibility_checker(scenario: &CrateScenario) -> FakeVeracityChecker {
         if scenario.reproducible {
             let info = CargoPackage::with(scenario.name, scenario.version);
-            FakeVeracityEvaluator(vec![info])
+            FakeVeracityChecker(vec![info])
         } else {
-            FakeVeracityEvaluator(vec![])
+            FakeVeracityChecker(vec![])
         }
     }
 
     #[tokio::test]
-    async fn test_veracity_evaluator_scenarios() {
+    async fn should_analyse_veracity_of_packages() {
         let scenarios = vec![
             CrateScenario {
                 name: "canopus",
@@ -165,21 +163,21 @@ mod tests {
             let crate_info = CargoPackage::with(scenario.name, scenario.version);
             let previous_veracity_level = CrateVeracityLevel::from_booleans(scenario.provenance, scenario.reproducible);
 
-            let veracity_evaluator = CombinedVeracityEvaluator::new(
-                CachedExecutionEvaluator::FakeCache(fake_results_storage(&scenario)),
-                CrateProvenanceEvaluator::FakeRegistry(fake_provenance_evaluator(&scenario)),
-                BuildReproducibilityEvaluator::FakeRebuilder(fake_reproducibility_evaluator(&scenario)),
+            let veracity_analyser = VeracityFactorsAnalyser::new(
+                CachedDataChecker::FakeCache(fake_results_storage(&scenario)),
+                CrateProvenanceChecker::FakeRegistry(fake_provenance_checker(&scenario)),
+                BuildReproducibilityChecker::FakeRebuilder(fake_reproducibility_checker(&scenario)),
             );
 
-            let evaluation = veracity_evaluator.evaluate(&crate_info).await.unwrap();
+            let analysis = veracity_analyser.execute(&crate_info).await.unwrap();
 
-            assertor::assert_that!(evaluation).is_equal_to(scenario.expected);
+            assertor::assert_that!(analysis).is_equal_to(scenario.expected);
 
             if previous_veracity_level == CrateVeracityLevel::NotAvailable
-                && evaluation != CrateVeracityLevel::NotAvailable
+                && analysis != CrateVeracityLevel::NotAvailable
             {
-                match veracity_evaluator.cache {
-                    CachedExecutionEvaluator::FakeCache(entries) => {
+                match veracity_analyser.cache {
+                    CachedDataChecker::FakeCache(entries) => {
                         assertor::assert_that!(entries.contains_key(scenario.name)).is_true()
                     },
                     _ => panic!("Not allowed on this test"),

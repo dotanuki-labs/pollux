@@ -1,33 +1,33 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::evaluators::combined::CombinedVeracityEvaluator;
-use crate::core::interfaces::CrateVeracityLevelEvaluation;
+use crate::core::analysers::combined::VeracityFactorsAnalyser;
+use crate::core::interfaces::CrateVeracityAnalysis;
 use crate::core::models::CargoPackage;
 use crate::infra::networking::ossrebuild::URL_OSS_REBUILD_CRATES;
 use console::style;
 use std::str::FromStr;
 use url::Url;
 
-pub struct PolluxCrateChecker {
-    veracity_evaluator: CombinedVeracityEvaluator,
+pub struct PolluxChecker {
+    veracity_analyser: VeracityFactorsAnalyser,
 }
 
-impl PolluxCrateChecker {
-    pub fn new(veracity_evaluator: CombinedVeracityEvaluator) -> Self {
-        Self { veracity_evaluator }
+impl PolluxChecker {
+    pub fn new(veracity_analyser: VeracityFactorsAnalyser) -> Self {
+        Self { veracity_analyser }
     }
 
-    pub async fn check(&self, cargo_package: &CargoPackage) -> anyhow::Result<()> {
+    pub async fn check_package(&self, cargo_package: &CargoPackage) -> anyhow::Result<()> {
         println!();
         println!("Checking veracity factors for : {}", cargo_package);
         println!();
 
         log::info!("[pollux.checker] starting evaluation for package {}", cargo_package);
-        let maybe_evaluated = self.veracity_evaluator.evaluate(cargo_package).await.ok();
+        let maybe_checked = self.veracity_analyser.execute(cargo_package).await.ok();
         log::info!("[pollux.checker] finished evaluation for package {}", cargo_package);
 
-        let Some(veracity_level) = maybe_evaluated else {
+        let Some(veracity_level) = maybe_checked else {
             self.report_evidence(cargo_package, None, None);
             return Ok(());
         };
