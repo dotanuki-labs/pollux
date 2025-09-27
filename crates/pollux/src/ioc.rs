@@ -15,8 +15,9 @@ use crate::infra::networking::http::HTTP_CLIENT;
 use crate::infra::networking::ossrebuild::OssRebuildEvaluator;
 use crate::infra::networking::{crates, ossrebuild};
 use crate::pollux::Pollux;
-use crate::pollux::actors::check::PolluxStandalonePackageChecker;
-use crate::pollux::actors::evaluation::PolluxEvaluatorActor;
+use crate::pollux::checker::PolluxCrateChecker;
+use crate::pollux::cleaner::PolluxCleaner;
+use crate::pollux::evaluator::PolluxEvaluatorActor;
 
 pub static MILLIS_TO_WAIT_AFTER_RATE_LIMITED: u64 = 1100;
 
@@ -47,20 +48,23 @@ fn veracity_evaluator() -> CombinedVeracityEvaluator {
     CombinedVeracityEvaluator::new(cached_evaluator(), provenance_evaluator(), reproducibility_evaluator())
 }
 
-fn pollux_evaluator() -> PolluxEvaluatorActor {
-    PolluxEvaluatorActor::new(veracity_evaluator())
-}
-
 fn dependencies_resolver() -> DependenciesResolver {
     let downloader = CrateArchiveDownloader::new(cratesio_client(), CacheManager::get());
     DependenciesResolver::new(downloader)
 }
 
+fn pollux_evaluator() -> PolluxEvaluatorActor {
+    PolluxEvaluatorActor::new(dependencies_resolver(), veracity_evaluator())
+}
+
+fn pollux_checker() -> PolluxCrateChecker {
+    PolluxCrateChecker::new(veracity_evaluator())
+}
+
+fn pollux_cleaner() -> PolluxCleaner {
+    PolluxCleaner::new(CacheManager::get())
+}
+
 pub fn create_pollux() -> Pollux {
-    Pollux::new(
-        CacheManager::get(),
-        dependencies_resolver(),
-        pollux_evaluator,
-        PolluxStandalonePackageChecker::new(veracity_evaluator()),
-    )
+    Pollux::new(pollux_cleaner(), pollux_evaluator(), pollux_checker())
 }
