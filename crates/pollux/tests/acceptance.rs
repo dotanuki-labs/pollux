@@ -13,7 +13,7 @@ fn sut() -> Command {
 }
 
 #[test]
-fn should_evaluate_project_from_path() {
+fn should_analyse_project_from_path() {
     let lockfile_contents = r#"
             version = 3
 
@@ -42,22 +42,22 @@ fn should_evaluate_project_from_path() {
     fs::write(&lockfile_path, lockfile_contents).expect("failed to cargo manifest file");
 
     sut()
-        .args(["evaluate", "project", cargo_project.path().to_str().unwrap()])
+        .args(["analyse", "project", cargo_project.path().to_str().unwrap()])
         .assert()
         .success()
-        .stdout(contains("total packages evaluated : 3"))
+        .stdout(contains("total packages analysed : 3"))
         .stdout(contains("pkg:cargo/arbitrary@1.4.1 (none)"))
         .stdout(contains("pkg:cargo/find-msvc-tools@0.1.1 (provenance attested)"))
         .stdout(contains("pkg:cargo/levenshtein@1.0.5 (reproducible builds)"));
 }
 
 #[test]
-fn should_evaluate_project_from_package_purl() {
+fn should_analyse_project_from_package_purl() {
     sut()
-        .args(["evaluate", "crate", "pkg:cargo/serde@1.0.226"])
+        .args(["analyse", "crate", "pkg:cargo/serde@1.0.226"])
         .assert()
         .success()
-        .stdout(contains("total packages evaluated : 6"))
+        .stdout(contains("total packages analysed : 6"))
         .stdout(contains("pkg:cargo/proc-macro2@1.0.101 (none)"));
 }
 
@@ -89,7 +89,7 @@ fn should_cleanup_caches() {
     fs::write(&lockfile_path, lockfile_contents).expect("failed to cargo manifest file");
 
     sut()
-        .args(["evaluate", "project", cargo_project.path().to_str().unwrap()])
+        .args(["analyse", "project", cargo_project.path().to_str().unwrap()])
         .assert()
         .success();
 

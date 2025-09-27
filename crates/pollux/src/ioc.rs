@@ -1,30 +1,23 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::evaluators::combined::CombinedVeracityEvaluator;
-use crate::core::evaluators::standalone::{
-    BuildReproducibilityEvaluator, CachedExecutionEvaluator, CrateProvenanceEvaluator,
-};
+use crate::core::analysers::combined::VeracityFactorsAnalyser;
+use crate::core::analysers::standalone::{BuildReproducibilityChecker, CachedDataChecker, CrateProvenanceChecker};
 use crate::infra::caching::CacheManager;
-use crate::infra::caching::evaluations::VeracityEvaluationsCache;
-use crate::infra::networking::crates::OfficialCratesRegistryEvaluator;
+use crate::infra::caching::analysis::AnalysedPackagesCache;
+use crate::infra::networking::crates::OfficialCratesRegistryChecker;
 use crate::infra::networking::crates::registry::CratesDotIOClient;
 use crate::infra::networking::crates::resolvers::DependenciesResolver;
 use crate::infra::networking::crates::tarballs::CrateArchiveDownloader;
 use crate::infra::networking::http::HTTP_CLIENT;
-use crate::infra::networking::ossrebuild::OssRebuildEvaluator;
+use crate::infra::networking::ossrebuild::OssRebuildChecker;
 use crate::infra::networking::{crates, ossrebuild};
 use crate::pollux::Pollux;
-use crate::pollux::checker::PolluxCrateChecker;
+use crate::pollux::analyser::PolluxAnalyser;
+use crate::pollux::checker::PolluxChecker;
 use crate::pollux::cleaner::PolluxCleaner;
-use crate::pollux::evaluator::PolluxEvaluatorActor;
 
 pub static MILLIS_TO_WAIT_AFTER_RATE_LIMITED: u64 = 1100;
-
-fn cached_evaluator() -> CachedExecutionEvaluator {
-    let delegate = VeracityEvaluationsCache::new(CacheManager::get());
-    CachedExecutionEvaluator::FileSystem(delegate)
-}
 
 fn cratesio_client() -> CratesDotIOClient {
     CratesDotIOClient::new(
@@ -34,18 +27,23 @@ fn cratesio_client() -> CratesDotIOClient {
     )
 }
 
-fn provenance_evaluator() -> CrateProvenanceEvaluator {
-    let delegate = OfficialCratesRegistryEvaluator::new(cratesio_client());
-    CrateProvenanceEvaluator::CratesOfficialRegistry(delegate)
+fn cached_checker() -> CachedDataChecker {
+    let delegate = AnalysedPackagesCache::new(CacheManager::get());
+    CachedDataChecker::FileSystem(delegate)
 }
 
-fn reproducibility_evaluator() -> BuildReproducibilityEvaluator {
-    let delegate = OssRebuildEvaluator::new(ossrebuild::URL_OSS_REBUILD_CRATES.to_string(), HTTP_CLIENT.clone());
-    BuildReproducibilityEvaluator::GoogleOssRebuild(delegate)
+fn provenance_checker() -> CrateProvenanceChecker {
+    let delegate = OfficialCratesRegistryChecker::new(cratesio_client());
+    CrateProvenanceChecker::CratesOfficialRegistry(delegate)
 }
 
-fn veracity_evaluator() -> CombinedVeracityEvaluator {
-    CombinedVeracityEvaluator::new(cached_evaluator(), provenance_evaluator(), reproducibility_evaluator())
+fn reproducibility_checker() -> BuildReproducibilityChecker {
+    let delegate = OssRebuildChecker::new(ossrebuild::URL_OSS_REBUILD_CRATES.to_string(), HTTP_CLIENT.clone());
+    BuildReproducibilityChecker::GoogleOssRebuild(delegate)
+}
+
+fn veracity_analyser() -> VeracityFactorsAnalyser {
+    VeracityFactorsAnalyser::new(cached_checker(), provenance_checker(), reproducibility_checker())
 }
 
 fn dependencies_resolver() -> DependenciesResolver {
@@ -53,12 +51,12 @@ fn dependencies_resolver() -> DependenciesResolver {
     DependenciesResolver::new(downloader)
 }
 
-fn pollux_evaluator() -> PolluxEvaluatorActor {
-    PolluxEvaluatorActor::new(dependencies_resolver(), veracity_evaluator())
+fn pollux_analyser() -> PolluxAnalyser {
+    PolluxAnalyser::new(dependencies_resolver(), veracity_analyser())
 }
 
-fn pollux_checker() -> PolluxCrateChecker {
-    PolluxCrateChecker::new(veracity_evaluator())
+fn pollux_checker() -> PolluxChecker {
+    PolluxChecker::new(veracity_analyser())
 }
 
 fn pollux_cleaner() -> PolluxCleaner {
@@ -66,5 +64,5 @@ fn pollux_cleaner() -> PolluxCleaner {
 }
 
 pub fn create_pollux() -> Pollux {
-    Pollux::new(pollux_cleaner(), pollux_evaluator(), pollux_checker())
+    Pollux::new(pollux_cleaner(), pollux_analyser(), pollux_checker())
 }

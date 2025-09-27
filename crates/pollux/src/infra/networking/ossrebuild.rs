@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::interfaces::VeracityFactorEvaluation;
+use crate::core::interfaces::VeracityFactorCheck;
 use crate::core::models::CargoPackage;
 use crate::infra::networking::http::HTTPClient;
 use anyhow::bail;
@@ -10,19 +10,19 @@ use std::sync::Arc;
 
 pub static URL_OSS_REBUILD_CRATES: &str = "https://storage.googleapis.com/google-rebuild-attestations/cratesio";
 
-pub struct OssRebuildEvaluator {
+pub struct OssRebuildChecker {
     base_url: String,
     http_client: Arc<HTTPClient>,
 }
 
-impl OssRebuildEvaluator {
+impl OssRebuildChecker {
     pub fn new(base_url: String, http_client: Arc<HTTPClient>) -> Self {
         Self { base_url, http_client }
     }
 }
 
-impl VeracityFactorEvaluation for OssRebuildEvaluator {
-    async fn evaluate(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
+impl VeracityFactorCheck for OssRebuildChecker {
+    async fn execute(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
         let endpoint = format!(
             "{}/{}/{}/{}-{}.crate/rebuild.intoto.jsonl",
             self.base_url, crate_info.name, crate_info.version, crate_info.name, crate_info.version
@@ -37,17 +37,17 @@ impl VeracityFactorEvaluation for OssRebuildEvaluator {
         };
 
         if response.status() == StatusCode::OK {
-            log::info!("[pollux.evaluator] found reproduced build for {}", crate_info);
+            log::info!("[pollux.checker] found reproduced build for {}", crate_info);
             return Ok(true);
         }
 
         if response.status() == StatusCode::NOT_FOUND {
-            log::info!("[pollux.evaluator] reproduced build not found for {}", crate_info);
+            log::info!("[pollux.checker] reproduced build not found for {}", crate_info);
             return Ok(false);
         }
 
         bail!(
-            "pollux.evaluator : cannot fetch information from oss-rebuild (HTTP status = {})",
+            "pollux.checker : cannot fetch information from oss-rebuild (HTTP status = {})",
             response.status()
         )
     }
@@ -55,17 +55,17 @@ impl VeracityFactorEvaluation for OssRebuildEvaluator {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::interfaces::VeracityFactorEvaluation;
+    use crate::core::interfaces::VeracityFactorCheck;
     use crate::core::models::CargoPackage;
     use crate::infra::networking::http::{HTTP_CLIENT, MAX_HTTP_RETRY_ATTEMPTS};
-    use crate::infra::networking::ossrebuild::OssRebuildEvaluator;
+    use crate::infra::networking::ossrebuild::OssRebuildChecker;
     use assertor::{BooleanAssertion, ResultAssertion};
     use httpmock::MockServer;
 
     #[tokio::test]
-    async fn should_evaluate_rebuild_when_available() {
+    async fn should_check_rebuild_when_available() {
         let mock_server = MockServer::start();
-        let evaluator = OssRebuildEvaluator::new(mock_server.base_url(), HTTP_CLIENT.clone());
+        let checker = OssRebuildChecker::new(mock_server.base_url(), HTTP_CLIENT.clone());
 
         let name = "castaway";
         let version = "0.2.2";
@@ -79,16 +79,16 @@ mod tests {
             then.status(200).header("content-type", "text/plain; charset=UTF-8");
         });
 
-        let evaluation = evaluator.evaluate(&crate_info).await.unwrap();
+        let check = checker.execute(&crate_info).await.unwrap();
 
         mocked.assert();
-        assertor::assert_that!(evaluation).is_true()
+        assertor::assert_that!(check).is_true()
     }
 
     #[tokio::test]
-    async fn should_evaluate_rebuild_when_not_available() {
+    async fn should_check_rebuild_when_not_available() {
         let mock_server = MockServer::start();
-        let evaluator = OssRebuildEvaluator::new(mock_server.base_url(), HTTP_CLIENT.clone());
+        let checker = OssRebuildChecker::new(mock_server.base_url(), HTTP_CLIENT.clone());
 
         let name = "castaway";
         let version = "0.1.0";
@@ -105,16 +105,16 @@ mod tests {
                 .body("not found");
         });
 
-        let evaluation = evaluator.evaluate(&crate_info).await.unwrap();
+        let check = checker.execute(&crate_info).await.unwrap();
 
         mocked.assert();
-        assertor::assert_that!(evaluation).is_false()
+        assertor::assert_that!(check).is_false()
     }
 
     #[tokio::test]
-    async fn should_not_evaluate_rebuild_when_with_different_status_code() {
+    async fn should_not_check_rebuild_when_with_different_status_code() {
         let mock_server = MockServer::start();
-        let evaluator = OssRebuildEvaluator::new(mock_server.base_url(), HTTP_CLIENT.clone());
+        let checker = OssRebuildChecker::new(mock_server.base_url(), HTTP_CLIENT.clone());
 
         let name = "castaway";
         let version = "0.2.4";
@@ -131,9 +131,9 @@ mod tests {
                 .body("internal server error");
         });
 
-        let evaluation = evaluator.evaluate(&crate_info).await;
+        let check = checker.execute(&crate_info).await;
 
         mocked.assert_calls(MAX_HTTP_RETRY_ATTEMPTS as usize + 1);
-        assertor::assert_that!(evaluation).is_err()
+        assertor::assert_that!(check).is_err()
     }
 }

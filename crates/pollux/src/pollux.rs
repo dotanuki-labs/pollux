@@ -1,51 +1,51 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
+pub mod analyser;
 pub mod checker;
 pub mod cleaner;
-pub mod evaluator;
 
 use crate::core::models::CargoPackage;
 use crate::pollux::PolluxTask::{
-    CheckRustCrate, CleanupEvaluations, CleanupEverything, CleanupPackages, EvaluateRustCrate, EvaluateRustProject,
+    AnalyseRustCrate, AnalyseRustProject, CheckRustCrate, CleanupAnalysedData, CleanupEverything, CleanupPackageSource,
 };
-use checker::PolluxCrateChecker;
+use analyser::PolluxAnalyser;
+use checker::PolluxChecker;
 use cleaner::PolluxCleaner;
-use evaluator::PolluxEvaluatorActor;
 use std::path::PathBuf;
 
 pub enum PolluxTask {
+    AnalyseRustCrate(CargoPackage),
+    AnalyseRustProject(PathBuf),
     CheckRustCrate(CargoPackage),
+    CleanupAnalysedData,
+    CleanupPackageSource,
     CleanupEverything,
-    CleanupPackages,
-    CleanupEvaluations,
-    EvaluateRustProject(PathBuf),
-    EvaluateRustCrate(CargoPackage),
 }
 
 pub struct Pollux {
     cleaner: PolluxCleaner,
-    evaluator: PolluxEvaluatorActor,
-    checker: PolluxCrateChecker,
+    analyser: PolluxAnalyser,
+    checker: PolluxChecker,
 }
 
 impl Pollux {
-    pub fn new(cleaner: PolluxCleaner, evaluator: PolluxEvaluatorActor, checker: PolluxCrateChecker) -> Self {
+    pub fn new(cleaner: PolluxCleaner, analyser: PolluxAnalyser, checker: PolluxChecker) -> Self {
         Self {
             cleaner,
-            evaluator,
+            analyser,
             checker,
         }
     }
 
     pub async fn execute(self, task: PolluxTask) -> anyhow::Result<()> {
         match task {
-            EvaluateRustProject(project_root) => self.evaluator.evaluate_local_project(project_root.as_path()).await,
-            EvaluateRustCrate(cargo_package) => self.evaluator.evaluate_crate_package(&cargo_package).await,
+            AnalyseRustProject(project_root) => self.analyser.analyse_project(project_root.as_path()).await,
+            AnalyseRustCrate(cargo_package) => self.analyser.analyse_package(&cargo_package).await,
+            CheckRustCrate(cargo_package) => self.checker.check_package(&cargo_package).await,
             CleanupEverything => self.cleaner.cleanup_everything(),
-            CleanupPackages => self.cleaner.cleanup_cached_packages(),
-            CleanupEvaluations => self.cleaner.cleanup_cached_evaluations(),
-            CheckRustCrate(cargo_package) => self.checker.check(&cargo_package).await,
+            CleanupPackageSource => self.cleaner.cleanup_package_sources(),
+            CleanupAnalysedData => self.cleaner.cleanup_analysed_data(),
         }
     }
 }

@@ -3,15 +3,15 @@
 
 use crate::core::models::{CargoPackage, CrateVeracityLevel};
 
-pub trait VeracityFactorEvaluation {
-    async fn evaluate(&self, cargo_package: &CargoPackage) -> anyhow::Result<bool>;
+pub trait VeracityFactorCheck {
+    async fn execute(&self, cargo_package: &CargoPackage) -> anyhow::Result<bool>;
 }
 
-pub trait CrateVeracityLevelEvaluation {
-    async fn evaluate(&self, cargo_package: &CargoPackage) -> anyhow::Result<CrateVeracityLevel>;
+pub trait CrateVeracityAnalysis {
+    async fn execute(&self, cargo_package: &CargoPackage) -> anyhow::Result<CrateVeracityLevel>;
 }
 
-pub trait VeracityEvaluationStorage {
-    fn retrieve_evaluation(&self, cargo_package: &CargoPackage) -> anyhow::Result<Option<CrateVeracityLevel>>;
-    fn save_evaluation(&self, cargo_package: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()>;
+pub trait AnalyzedDataStorage {
+    fn retrieve(&self, cargo_package: &CargoPackage) -> anyhow::Result<Option<CrateVeracityLevel>>;
+    fn save(&self, cargo_package: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()>;
 }
