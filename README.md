@@ -1,5 +1,7 @@
 # pollux
 
+> Analyse provenance and build reproducibility for Rust supply chains 🦀
+
 ## What
 
 > [!WARNING]

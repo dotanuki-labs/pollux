@@ -1,6 +1,6 @@
 [package]
 name = "pollux"
-description = "An opinionated way to kick-off CLI apps powered by Rust"
+description = "Analyse provenance and build reproducibility for Rust supply chains"
 authors.workspace = true
 edition.workspace = true
 documentation.workspace = true
@@ -16,7 +16,7 @@ anyhow.workspace = true
 better-panic.workspace = true
 bytes.workspace = true
 cargo-lock.workspace = true
-clap = { workspace = true, features = ["derive"] }
+clap.workspace = true
 console.workspace = true
 decompress.workspace = true
 env_logger.workspace = true
