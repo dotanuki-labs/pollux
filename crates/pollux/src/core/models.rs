@@ -4,8 +4,9 @@
 use packageurl::PackageUrl;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use url::Url;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash, Eq)]
 pub struct CargoPackage {
     pub name: String,
     pub version: String,
@@ -43,49 +44,27 @@ impl Display for CargoPackage {
 }
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
-pub enum VeracityFactor {
-    ReproducibleBuilds,
-    ProvenanceAttested,
+pub struct CrateVeracityChecks {
+    pub provenance_evidence: Option<Url>,
+    pub reproducibility_evidence: Option<Url>,
 }
 
-#[derive(Clone, Debug, PartialEq, Hash, Eq)]
-pub enum CrateVeracityLevel {
-    NotAvailable,
-    SingleFactor(VeracityFactor),
-    TwoFactors,
+impl CrateVeracityChecks {
+    pub fn new(provenance_evidence: Option<Url>, reproducibility_evidence: Option<Url>) -> Self {
+        Self {
+            provenance_evidence,
+            reproducibility_evidence,
+        }
+    }
 }
 
-impl Display for CrateVeracityLevel {
+impl Display for CrateVeracityChecks {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CrateVeracityLevel::NotAvailable => f.write_str("none"),
-            CrateVeracityLevel::SingleFactor(factor) => match factor {
-                VeracityFactor::ReproducibleBuilds => f.write_str("reproducible builds"),
-                VeracityFactor::ProvenanceAttested => f.write_str("provenance attested"),
-            },
-            CrateVeracityLevel::TwoFactors => f.write_str("provenance attested; reproducible builds"),
-        }
-    }
-}
-
-impl CrateVeracityLevel {
-    pub fn to_booleans(&self) -> (bool, bool) {
-        match self {
-            CrateVeracityLevel::NotAvailable => (false, false),
-            CrateVeracityLevel::SingleFactor(factor) => match factor {
-                VeracityFactor::ReproducibleBuilds => (false, true),
-                VeracityFactor::ProvenanceAttested => (true, false),
-            },
-            CrateVeracityLevel::TwoFactors => (true, true),
-        }
-    }
-
-    pub fn from_booleans(provenance: bool, rebuilds: bool) -> Self {
-        match (provenance, rebuilds) {
-            (true, true) => CrateVeracityLevel::TwoFactors,
-            (false, true) => CrateVeracityLevel::SingleFactor(VeracityFactor::ReproducibleBuilds),
-            (true, false) => CrateVeracityLevel::SingleFactor(VeracityFactor::ProvenanceAttested),
-            (false, false) => CrateVeracityLevel::NotAvailable,
+        match (&self.provenance_evidence, &self.reproducibility_evidence) {
+            (Some(_), Some(_)) => f.write_str("provenance attested; reproducible builds"),
+            (Some(_), None) => f.write_str("provenance attested"),
+            (None, Some(_)) => f.write_str("reproducible builds"),
+            (None, None) => f.write_str("none"),
         }
     }
 }

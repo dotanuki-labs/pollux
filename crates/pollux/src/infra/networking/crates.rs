@@ -4,6 +4,7 @@
 use crate::core::interfaces::VeracityFactorCheck;
 use crate::core::models::CargoPackage;
 use crate::infra::networking::crates::registry::CratesDotIOClient;
+use url::Url;
 
 pub mod registry;
 pub mod resolvers;
@@ -20,19 +21,24 @@ impl OfficialCratesRegistryChecker {
 }
 
 impl VeracityFactorCheck for OfficialCratesRegistryChecker {
-    async fn execute(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
-        let has_provenance = self
+    async fn execute(&self, crate_info: &CargoPackage) -> anyhow::Result<Option<Url>> {
+        let crate_details = self
             .cratesio_client
             .get_crate_version_details(crate_info.name.as_str(), crate_info.version.as_str())
             .await?;
 
-        if has_provenance {
-            log::info!("[pollux.checker] found provenance for {} ", crate_info,);
-            return Ok(has_provenance);
+        let Some(provenance) = crate_details.version.trustpub_data else {
+            log::info!("[pollux.checker] provenance not found for {}", crate_info);
+            return Ok(None);
         };
 
-        log::info!("[pollux.checker] provenance not found for {}", crate_info);
-        Ok(has_provenance)
+        let gha_run_url = format!(
+            "https://github.com/{}/actions/runs/{}",
+            provenance.repository, provenance.run_id
+        );
+
+        let attestation_url = Url::parse(gha_run_url.as_str())?;
+        Ok(Some(attestation_url))
     }
 }
 
@@ -43,7 +49,7 @@ mod tests {
     use crate::infra::networking::crates::OfficialCratesRegistryChecker;
     use crate::infra::networking::crates::registry::CratesDotIOClient;
     use crate::infra::networking::http::{HTTP_CLIENT, MAX_HTTP_RETRY_ATTEMPTS};
-    use assertor::{BooleanAssertion, ResultAssertion};
+    use assertor::{OptionAssertion, ResultAssertion, StringAssertion};
     use httpmock::{MockServer, Then, When};
 
     static SMALL_DELAY_FOR_RATE_LIMITING: u64 = 10;
@@ -128,15 +134,20 @@ mod tests {
             HTTP_CLIENT.clone(),
             SMALL_DELAY_FOR_RATE_LIMITING,
         );
+
         let checker = OfficialCratesRegistryChecker::new(cratesio_client);
 
         let with_provenance = responds_with_existing_provenance(crate_name, crate_version);
         let mocked = mock_server.mock(with_provenance);
 
-        let check = checker.execute(&crate_info).await.unwrap();
+        let check = checker
+            .execute(&crate_info)
+            .await
+            .expect("failed to execute mocked request");
+        let expected_path = "elastio/bon/actions/runs/17402178810";
 
         mocked.assert();
-        assertor::assert_that!(check).is_true()
+        assertor::assert_that!(check.unwrap().path()).contains(expected_path);
     }
 
     #[tokio::test]
@@ -160,7 +171,7 @@ mod tests {
         let check = checker.execute(&crate_info).await.unwrap();
 
         mocked.assert();
-        assertor::assert_that!(check).is_false()
+        assertor::assert_that!(check).is_none()
     }
 
     #[tokio::test]

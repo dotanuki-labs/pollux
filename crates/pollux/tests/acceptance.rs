@@ -67,7 +67,9 @@ fn should_check_standalone_package_purl() {
         .args(["check", "pkg:cargo/bon@3.7.2"])
         .assert()
         .success()
-        .stdout(contains("provenance evidence (v3.7.2 via github)"))
+        .stdout(contains(
+            "provenance evidence : https://github.com/elastio/bon/actions/runs/17402178810",
+        ))
         .stdout(contains("reproducibility evidence : not found"));
 }
 
