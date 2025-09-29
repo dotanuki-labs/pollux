@@ -6,7 +6,9 @@ use crate::core::models::CargoPackage;
 use crate::infra::networking::http::HTTPClient;
 use anyhow::bail;
 use reqwest::StatusCode;
+use std::str::FromStr;
 use std::sync::Arc;
+use url::Url;
 
 pub static URL_OSS_REBUILD_CRATES: &str = "https://storage.googleapis.com/google-rebuild-attestations/cratesio";
 
@@ -22,7 +24,7 @@ impl OssRebuildChecker {
 }
 
 impl VeracityFactorCheck for OssRebuildChecker {
-    async fn execute(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
+    async fn execute(&self, crate_info: &CargoPackage) -> anyhow::Result<Option<Url>> {
         let endpoint = format!(
             "{}/{}/{}/{}-{}.crate/rebuild.intoto.jsonl",
             self.base_url, crate_info.name, crate_info.version, crate_info.name, crate_info.version
@@ -38,12 +40,13 @@ impl VeracityFactorCheck for OssRebuildChecker {
 
         if response.status() == StatusCode::OK {
             log::info!("[pollux.checker] found reproduced build for {}", crate_info);
-            return Ok(true);
+            let url = url::Url::from_str(&endpoint)?;
+            return Ok(Some(url));
         }
 
         if response.status() == StatusCode::NOT_FOUND {
             log::info!("[pollux.checker] reproduced build not found for {}", crate_info);
-            return Ok(false);
+            return Ok(None);
         }
 
         bail!(
@@ -59,7 +62,7 @@ mod tests {
     use crate::core::models::CargoPackage;
     use crate::infra::networking::http::{HTTP_CLIENT, MAX_HTTP_RETRY_ATTEMPTS};
     use crate::infra::networking::ossrebuild::OssRebuildChecker;
-    use assertor::{BooleanAssertion, ResultAssertion};
+    use assertor::{OptionAssertion, ResultAssertion, StringAssertion};
     use httpmock::MockServer;
 
     #[tokio::test]
@@ -79,10 +82,12 @@ mod tests {
             then.status(200).header("content-type", "text/plain; charset=UTF-8");
         });
 
-        let check = checker.execute(&crate_info).await.unwrap();
+        let check = checker.execute(&crate_info).await.expect("fail the execute request");
+
+        let path = format!("{}-{}.crate/rebuild.intoto.jsonl", crate_info.name, crate_info.version);
 
         mocked.assert();
-        assertor::assert_that!(check).is_true()
+        assertor::assert_that!(check.unwrap().path()).contains(path);
     }
 
     #[tokio::test]
@@ -108,7 +113,7 @@ mod tests {
         let check = checker.execute(&crate_info).await.unwrap();
 
         mocked.assert();
-        assertor::assert_that!(check).is_false()
+        assertor::assert_that!(check).is_none()
     }
 
     #[tokio::test]

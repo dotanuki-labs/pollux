@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 use crate::core::interfaces::{AnalyzedDataStorage, VeracityFactorCheck};
-use crate::core::models::{CargoPackage, CrateVeracityLevel};
+use crate::core::models::{CargoPackage, CrateVeracityChecks};
 use crate::infra::caching::analysis::AnalysedPackagesCache;
 use crate::infra::networking::crates::OfficialCratesRegistryChecker;
 use crate::infra::networking::ossrebuild::OssRebuildChecker;
-#[cfg(test)]
-use std::collections::HashMap;
+use url::Url;
 
 pub enum CrateProvenanceChecker {
     CratesOfficialRegistry(OfficialCratesRegistryChecker),
@@ -16,7 +15,7 @@ pub enum CrateProvenanceChecker {
 }
 
 impl VeracityFactorCheck for CrateProvenanceChecker {
-    async fn execute(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
+    async fn execute(&self, crate_info: &CargoPackage) -> anyhow::Result<Option<Url>> {
         match self {
             CrateProvenanceChecker::CratesOfficialRegistry(delegate) => delegate.execute(crate_info).await,
             #[cfg(test)]
@@ -32,7 +31,7 @@ pub enum BuildReproducibilityChecker {
 }
 
 impl VeracityFactorCheck for BuildReproducibilityChecker {
-    async fn execute(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
+    async fn execute(&self, crate_info: &CargoPackage) -> anyhow::Result<Option<Url>> {
         match self {
             BuildReproducibilityChecker::GoogleOssRebuild(delegate) => delegate.execute(crate_info).await,
             #[cfg(test)]
@@ -44,11 +43,11 @@ impl VeracityFactorCheck for BuildReproducibilityChecker {
 pub enum CachedDataChecker {
     FileSystem(AnalysedPackagesCache),
     #[cfg(test)]
-    FakeCache(HashMap<String, CrateVeracityLevel>),
+    FakeCache(HashMap<String, CrateVeracityChecks>),
 }
 
 impl AnalyzedDataStorage for CachedDataChecker {
-    fn retrieve(&self, crate_info: &CargoPackage) -> anyhow::Result<Option<CrateVeracityLevel>> {
+    fn retrieve(&self, crate_info: &CargoPackage) -> anyhow::Result<Option<CrateVeracityChecks>> {
         match self {
             CachedDataChecker::FileSystem(delegate) => delegate.retrieve(crate_info),
             #[cfg(test)]
@@ -56,12 +55,12 @@ impl AnalyzedDataStorage for CachedDataChecker {
         }
     }
 
-    fn save(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
+    fn save(&self, crate_info: &CargoPackage, checks: CrateVeracityChecks) -> anyhow::Result<()> {
         match self {
-            CachedDataChecker::FileSystem(delegate) => delegate.save(crate_info, veracity_level),
+            CachedDataChecker::FileSystem(delegate) => delegate.save(crate_info, checks),
             #[cfg(test)]
             CachedDataChecker::FakeCache(fakes) => {
-                fakes.to_owned().insert(crate_info.name.clone(), veracity_level);
+                fakes.to_owned().insert(crate_info.name.clone(), checks);
                 Ok(())
             },
         }
@@ -69,11 +68,17 @@ impl AnalyzedDataStorage for CachedDataChecker {
 }
 
 #[cfg(test)]
-pub struct FakeVeracityChecker(pub Vec<CargoPackage>);
+use std::collections::HashMap;
+#[cfg(test)]
+use std::str::FromStr;
+
+#[cfg(test)]
+pub struct FakeVeracityChecker(pub HashMap<CargoPackage, String>);
 
 #[cfg(test)]
 impl VeracityFactorCheck for FakeVeracityChecker {
-    async fn execute(&self, crate_info: &CargoPackage) -> anyhow::Result<bool> {
-        Ok(self.0.contains(crate_info))
+    async fn execute(&self, cargo_package: &CargoPackage) -> anyhow::Result<Option<Url>> {
+        let url = self.0.get(cargo_package).map(|url| Url::from_str(url).unwrap());
+        Ok(url)
     }
 }

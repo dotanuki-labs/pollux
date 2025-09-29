@@ -1,20 +1,17 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::analysers::combined::VeracityFactorsAnalyser;
+use crate::core::analysers::combined::VeracityChecksAnalyser;
 use crate::core::interfaces::CrateVeracityAnalysis;
 use crate::core::models::CargoPackage;
-use crate::infra::networking::ossrebuild::URL_OSS_REBUILD_CRATES;
-use console::style;
-use std::str::FromStr;
 use url::Url;
 
 pub struct PolluxChecker {
-    veracity_analyser: VeracityFactorsAnalyser,
+    veracity_analyser: VeracityChecksAnalyser,
 }
 
 impl PolluxChecker {
-    pub fn new(veracity_analyser: VeracityFactorsAnalyser) -> Self {
+    pub fn new(veracity_analyser: VeracityChecksAnalyser) -> Self {
         Self { veracity_analyser }
     }
 
@@ -27,56 +24,27 @@ impl PolluxChecker {
         let maybe_checked = self.veracity_analyser.execute(cargo_package).await.ok();
         log::info!("[pollux.checker] finished evaluation for package {}", cargo_package);
 
-        let Some(veracity_level) = maybe_checked else {
-            self.report_evidence(cargo_package, None, None);
+        let Some(veracity_checks) = maybe_checked else {
+            self.report_evidence(None, None);
             return Ok(());
         };
 
-        let (attested, reproducible) = veracity_level.to_booleans();
-
-        let provenance_evidence = if attested {
-            let crates_link = format!("https://crates.io/crates/{}/versions", cargo_package.name);
-            Url::from_str(&crates_link).ok()
-        } else {
-            None
-        };
-
-        let reproducibility_evidence = if reproducible {
-            let oss_rebuild_link = format!(
-                "{}/{}/{}/{}-{}.crate/rebuild.intoto.jsonl",
-                URL_OSS_REBUILD_CRATES,
-                cargo_package.name,
-                cargo_package.version,
-                cargo_package.name,
-                cargo_package.version
-            );
-            Url::from_str(&oss_rebuild_link).ok()
-        } else {
-            None
-        };
-
-        self.report_evidence(cargo_package, provenance_evidence, reproducibility_evidence);
+        self.report_evidence(
+            veracity_checks.provenance_evidence,
+            veracity_checks.reproducibility_evidence,
+        );
         Ok(())
     }
 
-    fn report_evidence(
-        &self,
-        cargo_package: &CargoPackage,
-        provenance_evidence: Option<Url>,
-        reproducibility_evidence: Option<Url>,
-    ) {
+    fn report_evidence(&self, provenance_evidence: Option<Url>, reproducibility_evidence: Option<Url>) {
         if let Some(cratesio_link) = provenance_evidence {
-            println!(
-                "• provenance evidence (v{} via github): {}",
-                cargo_package.version,
-                style(cratesio_link).cyan()
-            );
+            println!("• provenance evidence : {}", cratesio_link);
         } else {
             println!("• provenance evidence : not found");
         }
 
         if let Some(oss_rebuild_link) = reproducibility_evidence {
-            println!("• reproducibility evidence : {}", style(oss_rebuild_link).cyan());
+            println!("• reproducibility evidence : {}", oss_rebuild_link);
         } else {
             println!("• reproducibility evidence : not found");
         }

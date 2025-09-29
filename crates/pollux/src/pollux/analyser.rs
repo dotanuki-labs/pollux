@@ -1,16 +1,16 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::analysers::combined::VeracityFactorsAnalyser;
+use crate::core::analysers::combined::VeracityChecksAnalyser;
 use crate::core::interfaces::CrateVeracityAnalysis;
-use crate::core::models::{CargoPackage, CrateVeracityLevel, VeracityFactor};
+use crate::core::models::{CargoPackage, CrateVeracityChecks};
 use crate::infra::networking::crates::resolvers::DependenciesResolver;
 use crate::ioc::MILLIS_TO_WAIT_AFTER_RATE_LIMITED;
 use console::style;
 use ractor::{Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
 use std::path::Path;
 
-pub type AnalysisOutcome = (CargoPackage, Option<CrateVeracityLevel>);
+pub type AnalysisOutcome = (CargoPackage, Option<CrateVeracityChecks>);
 
 pub struct StatisticsForPackages {
     pub total: usize,
@@ -30,11 +30,11 @@ pub enum AnalyserMessage {
 
 pub struct PolluxAnalyser {
     dependencies_resolver: DependenciesResolver,
-    veracity_analyser: VeracityFactorsAnalyser,
+    veracity_analyser: VeracityChecksAnalyser,
 }
 
 impl PolluxAnalyser {
-    pub fn new(dependencies_resolver: DependenciesResolver, veracity_analyser: VeracityFactorsAnalyser) -> Self {
+    pub fn new(dependencies_resolver: DependenciesResolver, veracity_analyser: VeracityChecksAnalyser) -> Self {
         Self {
             dependencies_resolver,
             veracity_analyser,
@@ -134,21 +134,21 @@ impl Actor for PolluxAnalyser {
                 let mut with_provenance = 0;
                 let mut with_reproducible_builds = 0;
 
-                for (package, veracity_level) in outcomes.iter() {
+                for (package, checks) in outcomes.iter() {
                     total_analysed_packages += 1;
 
-                    if let Some(level) = veracity_level {
-                        match level {
-                            CrateVeracityLevel::NotAvailable => {
-                                log::info!("[pollux.actor] no stats for : {}", &package);
-                            },
-                            CrateVeracityLevel::SingleFactor(factor) => match factor {
-                                VeracityFactor::ReproducibleBuilds => with_reproducible_builds += 1,
-                                VeracityFactor::ProvenanceAttested => with_provenance += 1,
-                            },
-                            CrateVeracityLevel::TwoFactors => {
+                    if let Some(existing) = checks {
+                        match (&existing.provenance_evidence, &existing.reproducibility_evidence) {
+                            (Some(_), Some(_)) => {
                                 with_reproducible_builds += 1;
                                 with_provenance += 1
+                            },
+
+                            (Some(_), None) => with_provenance += 1,
+
+                            (None, Some(_)) => with_reproducible_builds += 1,
+                            (None, None) => {
+                                log::info!("[pollux.actor] no stats for : {}", &package);
                             },
                         }
                     }

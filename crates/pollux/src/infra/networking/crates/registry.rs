@@ -10,24 +10,20 @@ use tokio::time::sleep;
 
 pub static URL_OFFICIAL_CRATES_REGISTRY: &str = "https://crates.io";
 
-#[derive(Deserialize)]
-#[allow(dead_code)]
-struct TrustPubData {
-    provider: String,
-    repository: String,
-    run_id: String,
+#[derive(Debug, Deserialize)]
+pub struct TrustPubData {
+    pub repository: String,
+    pub run_id: String,
 }
 
-#[derive(Deserialize)]
-#[allow(unused_variables)]
-struct InfoForCrateVersion {
-    trustpub_data: Option<TrustPubData>,
+#[derive(Debug, Deserialize)]
+pub struct InfoForCrateVersion {
+    pub trustpub_data: Option<TrustPubData>,
 }
 
-#[derive(Deserialize)]
-#[allow(unused_variables)]
-struct CrateVersionDetails {
-    version: InfoForCrateVersion,
+#[derive(Debug, Deserialize)]
+pub struct CrateVersionDetails {
+    pub version: InfoForCrateVersion,
 }
 
 pub struct CratesDotIOClient {
@@ -45,7 +41,11 @@ impl CratesDotIOClient {
         }
     }
 
-    pub async fn get_crate_version_details(&self, crate_name: &str, crate_version: &str) -> anyhow::Result<bool> {
+    pub async fn get_crate_version_details(
+        &self,
+        crate_name: &str,
+        crate_version: &str,
+    ) -> anyhow::Result<CrateVersionDetails> {
         self.honor_cratesio_rate_limit().await;
 
         let endpoint = format!("{}/api/v1/crates/{}/{}", self.base_url, crate_name, crate_version);
@@ -59,7 +59,7 @@ impl CratesDotIOClient {
             .json::<CrateVersionDetails>()
             .await?;
 
-        Ok(crates_details.version.trustpub_data.is_some())
+        Ok(crates_details)
     }
 
     pub async fn get_crate_tarball(&self, crate_name: &str, crate_version: &str) -> anyhow::Result<bytes::Bytes> {

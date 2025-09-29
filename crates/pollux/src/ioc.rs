@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::analysers::combined::VeracityFactorsAnalyser;
+use crate::core::analysers::combined::VeracityChecksAnalyser;
 use crate::core::analysers::standalone::{BuildReproducibilityChecker, CachedDataChecker, CrateProvenanceChecker};
 use crate::infra::caching::CacheManager;
 use crate::infra::caching::analysis::AnalysedPackagesCache;
@@ -42,8 +42,8 @@ fn reproducibility_checker() -> BuildReproducibilityChecker {
     BuildReproducibilityChecker::GoogleOssRebuild(delegate)
 }
 
-fn veracity_analyser() -> VeracityFactorsAnalyser {
-    VeracityFactorsAnalyser::new(cached_checker(), provenance_checker(), reproducibility_checker())
+fn veracity_analyser() -> VeracityChecksAnalyser {
+    VeracityChecksAnalyser::new(cached_checker(), provenance_checker(), reproducibility_checker())
 }
 
 fn dependencies_resolver() -> DependenciesResolver {

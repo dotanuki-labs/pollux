@@ -2,18 +2,20 @@
 // SPDX-License-Identifier: MIT
 
 use crate::core::interfaces::AnalyzedDataStorage;
-use crate::core::models::{CargoPackage, CrateVeracityLevel};
+use crate::core::models::{CargoPackage, CrateVeracityChecks};
 use crate::infra::caching::CacheManager;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::str::FromStr;
+use url::Url;
 
 static VERACITY_CHECKS_FILE_NAME: &str = "checks.json";
 
 #[derive(Debug, Serialize, Deserialize)]
 struct CachedVeracityInfo {
     crate_purl: String,
-    provenance: bool,
-    reproducibility: bool,
+    provenance: Option<String>,
+    reproducibility: Option<String>,
 }
 
 pub struct AnalysedPackagesCache {
@@ -34,7 +36,7 @@ impl AnalysedPackagesCache {
 }
 
 impl AnalyzedDataStorage for AnalysedPackagesCache {
-    fn retrieve(&self, crate_info: &CargoPackage) -> anyhow::Result<Option<CrateVeracityLevel>> {
+    fn retrieve(&self, crate_info: &CargoPackage) -> anyhow::Result<Option<CrateVeracityChecks>> {
         let destination_dir = self.data_dir(crate_info);
         let cache_file = destination_dir.join(VERACITY_CHECKS_FILE_NAME);
 
@@ -46,11 +48,16 @@ impl AnalyzedDataStorage for AnalysedPackagesCache {
         log::info!("[pollux.cache] cache hit at {:?}", cache_file);
         let serialized = std::fs::read(cache_file)?;
         let info: CachedVeracityInfo = serde_json::from_slice(&serialized)?;
-        let veracity_level = CrateVeracityLevel::from_booleans(info.provenance, info.reproducibility);
-        Ok(Some(veracity_level))
+        let checks = CrateVeracityChecks::new(
+            info.provenance
+                .map(|url| Url::from_str(&url).expect("cannot parse cache url")),
+            info.reproducibility
+                .map(|url| Url::from_str(&url).expect("cannot parse cache url")),
+        );
+        Ok(Some(checks))
     }
 
-    fn save(&self, crate_info: &CargoPackage, veracity_level: CrateVeracityLevel) -> anyhow::Result<()> {
+    fn save(&self, crate_info: &CargoPackage, checks: CrateVeracityChecks) -> anyhow::Result<()> {
         let destination_dir = self.data_dir(crate_info);
         let cache_file = destination_dir.join(VERACITY_CHECKS_FILE_NAME);
 
@@ -59,12 +66,10 @@ impl AnalyzedDataStorage for AnalysedPackagesCache {
             log::info!("[pollux.cache] {:?} created", destination_dir);
         }
 
-        let (attested, reproduced) = veracity_level.to_booleans();
-
         let cached_veracity = CachedVeracityInfo {
             crate_purl: crate_info.to_string(),
-            provenance: attested,
-            reproducibility: reproduced,
+            provenance: checks.provenance_evidence.map(|url| url.to_string()),
+            reproducibility: checks.reproducibility_evidence.map(|url| url.to_string()),
         };
 
         let serialized = serde_json::to_vec(&cached_veracity)?;
