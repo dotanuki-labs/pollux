@@ -12,21 +12,15 @@ impl PolluxCleaner {
         Self { cache_manager }
     }
 
-    pub fn cleanup_analysed_data(&self) -> anyhow::Result<()> {
+    pub fn cleanup_analysed_data(&self) {
         self.cache_manager.cleanup_cached_analysis();
-        println!("Cached analysis removed with success!");
-        Ok(())
     }
 
-    pub fn cleanup_package_sources(&self) -> anyhow::Result<()> {
+    pub fn cleanup_package_sources(&self) {
         self.cache_manager.cleanup_cached_packages_sources();
-        println!("Cached package sources removed with success!");
-        Ok(())
     }
 
-    pub fn cleanup_everything(&self) -> anyhow::Result<()> {
+    pub fn cleanup_everything(&self) {
         self.cache_manager.cleanup_all();
-        println!("All caches removed with success!");
-        Ok(())
     }
 }

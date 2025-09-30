@@ -3,25 +3,11 @@
 
 use crate::core::analysers::combined::VeracityChecksAnalyser;
 use crate::core::interfaces::CrateVeracityAnalysis;
-use crate::core::models::{CargoPackage, CrateVeracityChecks};
+use crate::core::models::{AnalysisOutcome, AnalysisResults, CargoPackage, StatisticsForPackages};
 use crate::infra::networking::crates::resolvers::DependenciesResolver;
 use crate::ioc::MILLIS_TO_WAIT_AFTER_RATE_LIMITED;
-use console::style;
 use ractor::{Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
 use std::path::Path;
-
-pub type AnalysisOutcome = (CargoPackage, Option<CrateVeracityChecks>);
-
-pub struct StatisticsForPackages {
-    pub total: usize,
-    pub provenance_attested: usize,
-    pub reproducible_builds: usize,
-}
-
-pub struct AnalysisResults {
-    pub statistics: StatisticsForPackages,
-    pub outcomes: Vec<AnalysisOutcome>,
-}
 
 pub enum AnalyserMessage {
     AnalysePackage(CargoPackage),
@@ -41,8 +27,7 @@ impl PolluxAnalyser {
         }
     }
 
-    pub async fn analyse_project(self, project_path: &Path) -> anyhow::Result<()> {
-        self.show_analysis_disclaimer();
+    pub async fn analyse_project(self, project_path: &Path) -> anyhow::Result<AnalysisResults> {
         let cargo_packages = self
             .dependencies_resolver
             .resolve_for_local_project(project_path)
@@ -50,8 +35,7 @@ impl PolluxAnalyser {
         self.analyse_packages(cargo_packages).await
     }
 
-    pub async fn analyse_package(self, cargo_package: &CargoPackage) -> anyhow::Result<()> {
-        self.show_analysis_disclaimer();
+    pub async fn analyse_package(self, cargo_package: &CargoPackage) -> anyhow::Result<AnalysisResults> {
         let cargo_packages = self
             .dependencies_resolver
             .resolve_for_crate_package(cargo_package)
@@ -59,7 +43,7 @@ impl PolluxAnalyser {
         self.analyse_packages(cargo_packages).await
     }
 
-    async fn analyse_packages(self, cargo_packages: Vec<CargoPackage>) -> anyhow::Result<()> {
+    async fn analyse_packages(self, cargo_packages: Vec<CargoPackage>) -> anyhow::Result<AnalysisResults> {
         let total_project_packages = cargo_packages.len() as u64;
         let (actor, _) = Actor::spawn(None, self, total_project_packages).await?;
 
@@ -69,39 +53,7 @@ impl PolluxAnalyser {
 
         let max_timeout = MILLIS_TO_WAIT_AFTER_RATE_LIMITED * 2 * total_project_packages;
         let results = ractor::call_t!(actor, AnalyserMessage::AggregateResults, max_timeout)?;
-        Self::show_analysis_results(&results);
-        Ok(())
-    }
-
-    fn show_analysis_disclaimer(&self) {
-        println!();
-        println!("Analysing veracity for packages. This operation may take some time ...");
-    }
-
-    fn show_analysis_results(results: &AnalysisResults) {
-        let statistics = &results.statistics;
-        println!();
-        println!("Statistics : ");
-        println!();
-        println!("• total packages analysed : {}", statistics.total);
-        println!("• with provenance attested : {}", statistics.provenance_attested);
-        println!("• with reproducible builds : {}", statistics.reproducible_builds);
-        println!();
-        println!("Veracity factors : ");
-        println!();
-        results
-            .outcomes
-            .iter()
-            .for_each(|(package, maybe_veracity_check)| match maybe_veracity_check {
-                Some(level) => {
-                    println!("• {} ({}) ", package, style(level).cyan());
-                },
-                None => {
-                    println!("• {} : {}", package, style("failed to analyse").red());
-                },
-            });
-
-        println!();
+        Ok(results)
     }
 }
 

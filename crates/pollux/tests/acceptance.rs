@@ -42,7 +42,12 @@ fn should_analyse_project_from_path() {
     fs::write(&lockfile_path, lockfile_contents).expect("failed to cargo manifest file");
 
     sut()
-        .args(["analyse", "project", cargo_project.path().to_str().unwrap()])
+        .args([
+            "analyse",
+            "project",
+            cargo_project.path().to_str().unwrap(),
+            "--no-color",
+        ])
         .assert()
         .success()
         .stdout(contains("total packages analysed : 3"))
@@ -54,7 +59,7 @@ fn should_analyse_project_from_path() {
 #[test]
 fn should_analyse_project_from_package_purl() {
     sut()
-        .args(["analyse", "crate", "pkg:cargo/serde@1.0.226"])
+        .args(["analyse", "crate", "pkg:cargo/serde@1.0.226", "--no-color"])
         .assert()
         .success()
         .stdout(contains("total packages analysed : 6"))
@@ -64,7 +69,7 @@ fn should_analyse_project_from_package_purl() {
 #[test]
 fn should_check_standalone_package_purl() {
     sut()
-        .args(["check", "pkg:cargo/bon@3.7.2"])
+        .args(["check", "pkg:cargo/bon@3.7.2", "--no-color"])
         .assert()
         .success()
         .stdout(contains(
@@ -91,7 +96,12 @@ fn should_cleanup_caches() {
     fs::write(&lockfile_path, lockfile_contents).expect("failed to cargo manifest file");
 
     sut()
-        .args(["analyse", "project", cargo_project.path().to_str().unwrap()])
+        .args([
+            "analyse",
+            "project",
+            cargo_project.path().to_str().unwrap(),
+            "--no-color",
+        ])
         .assert()
         .success();
 
