@@ -15,9 +15,9 @@ static GLOBAL: Jemalloc = Jemalloc;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     cli::troubleshooting::setup_troubleshooting();
-    let pollux = ioc::create_pollux();
+    let (task, turnoff_colors) = cli::parsing::parse_arguments()?;
 
-    let task = cli::parsing::parse_arguments()?;
+    let pollux = ioc::create_pollux(turnoff_colors);
     pollux.execute(task).await?;
 
     Ok(())

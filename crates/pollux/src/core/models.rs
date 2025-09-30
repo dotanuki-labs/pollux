@@ -1,6 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
+use clap::ValueEnum;
 use packageurl::PackageUrl;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -67,4 +68,24 @@ impl Display for CrateVeracityChecks {
             (None, None) => f.write_str("none"),
         }
     }
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+pub enum CleanupScope {
+    Everything,
+    AnalysedData,
+    PackageSources,
+}
+
+pub type AnalysisOutcome = (CargoPackage, Option<CrateVeracityChecks>);
+
+pub struct StatisticsForPackages {
+    pub total: usize,
+    pub provenance_attested: usize,
+    pub reproducible_builds: usize,
+}
+
+pub struct AnalysisResults {
+    pub statistics: StatisticsForPackages,
+    pub outcomes: Vec<AnalysisOutcome>,
 }

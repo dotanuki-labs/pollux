@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::models::CargoPackage;
+use crate::core::models::{CargoPackage, CleanupScope};
 use crate::infra::cli::parsing::MainCommands::Analyse;
 use crate::pollux::PolluxTask;
 use anyhow::bail;
@@ -14,13 +14,6 @@ enum AnalysisSubject {
     Crate,
 }
 
-#[derive(ValueEnum, Debug, Clone)]
-pub enum CleanupScope {
-    Everything,
-    AnalysedData,
-    PackageSources,
-}
-
 #[derive(Args, Debug)]
 #[command(version, about, long_about = None)]
 struct AnalysisArguments {
@@ -30,6 +23,10 @@ struct AnalysisArguments {
 
     /// Folder path or crate package url (purl) to analyse
     pub input: String,
+
+    /// Whether to use colored output
+    #[arg(short, long, action, default_value = "false", help = "Turn off colored output")]
+    pub no_color: bool,
 }
 
 #[derive(Args, Debug)]
@@ -37,6 +34,10 @@ struct AnalysisArguments {
 struct CheckArguments {
     /// Crate package url (purl) to check
     pub input: String,
+
+    /// Whether to use colored output
+    #[arg(short, long, action, default_value = "false", help = "Turn off colored output")]
+    pub no_color: bool,
 }
 
 #[derive(Args, Debug)]
@@ -45,6 +46,10 @@ struct CleanupArguments {
     /// Define the scope of cached data to remove
     #[arg(value_enum)]
     pub mode: CleanupScope,
+
+    /// Whether to use colored output
+    #[arg(short, long, action, default_value = "false", help = "Turn off colored output")]
+    pub no_color: bool,
 }
 
 #[derive(Parser)]
@@ -65,33 +70,33 @@ enum MainCommands {
     Analyse(AnalysisArguments),
 }
 
-pub fn parse_arguments() -> anyhow::Result<PolluxTask> {
+pub fn parse_arguments() -> anyhow::Result<(PolluxTask, bool)> {
     let cli = CliParser::parse();
 
-    let task = match cli.command {
+    let (task, turnoff_colors) = match cli.command {
         Analyse(args) => match args.subject {
             AnalysisSubject::Project => {
                 let project_path = PathBuf::from(args.input);
                 if !project_path.exists() {
                     bail!("pollux.cli : no such file or directory ({:?})", project_path)
                 }
-                PolluxTask::AnalyseRustProject(project_path)
+                (PolluxTask::AnalyseRustProject(project_path), args.no_color)
             },
             AnalysisSubject::Crate => {
                 let cargo_package = CargoPackage::try_from(args.input)?;
-                PolluxTask::AnalyseRustCrate(cargo_package)
+                (PolluxTask::AnalyseRustCrate(cargo_package), args.no_color)
             },
         },
         MainCommands::Cleanup(args) => match args.mode {
-            CleanupScope::Everything => PolluxTask::CleanupEverything,
-            CleanupScope::AnalysedData => PolluxTask::CleanupAnalysedData,
-            CleanupScope::PackageSources => PolluxTask::CleanupPackageSource,
+            CleanupScope::Everything => (PolluxTask::CleanupEverything, args.no_color),
+            CleanupScope::AnalysedData => (PolluxTask::CleanupAnalysedData, args.no_color),
+            CleanupScope::PackageSources => (PolluxTask::CleanupPackageSource, args.no_color),
         },
         MainCommands::Check(args) => {
             let cargo_package = CargoPackage::try_from(args.input)?;
-            PolluxTask::CheckRustCrate(cargo_package)
+            (PolluxTask::CheckRustCrate(cargo_package), args.no_color)
         },
     };
 
-    Ok(task)
+    Ok((task, turnoff_colors))
 }

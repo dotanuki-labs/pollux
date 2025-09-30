@@ -5,6 +5,7 @@ use crate::core::analysers::combined::VeracityChecksAnalyser;
 use crate::core::analysers::standalone::{BuildReproducibilityChecker, CachedDataChecker, CrateProvenanceChecker};
 use crate::infra::caching::CacheManager;
 use crate::infra::caching::analysis::AnalysedPackagesCache;
+use crate::infra::cli::reporter::ConsoleReporter;
 use crate::infra::networking::crates::OfficialCratesRegistryChecker;
 use crate::infra::networking::crates::registry::CratesDotIOClient;
 use crate::infra::networking::crates::resolvers::DependenciesResolver;
@@ -63,6 +64,11 @@ fn pollux_cleaner() -> PolluxCleaner {
     PolluxCleaner::new(CacheManager::get())
 }
 
-pub fn create_pollux() -> Pollux {
-    Pollux::new(pollux_cleaner(), pollux_analyser(), pollux_checker())
+pub fn create_pollux(turnoff_colors: bool) -> Pollux {
+    Pollux::new(
+        pollux_cleaner(),
+        pollux_analyser(),
+        pollux_checker(),
+        ConsoleReporter::new(turnoff_colors),
+    )
 }

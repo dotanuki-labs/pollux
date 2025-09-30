@@ -2,4 +2,5 @@
 // SPDX-License-Identifier: MIT
 
 pub mod parsing;
+pub mod reporter;
 pub mod troubleshooting;
