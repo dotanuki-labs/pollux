@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::models::{CargoPackage, CrateVeracityChecks};
+use crate::domain::models::{CargoPackage, CrateVeracityChecks};
 use url::Url;
 
 pub trait VeracityFactorCheck {

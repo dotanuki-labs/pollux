@@ -1,6 +1,6 @@
 [package]
-name = "pollux"
-description = "Get provenance and build reproducibility insights for your Rust supply chain"
+name = "pollux-core"
+description = "Core abstractions for pollux."
 authors.workspace = true
 edition.workspace = true
 documentation.workspace = true
@@ -10,6 +10,7 @@ readme.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
+publish = true
 
 [dependencies]
 anyhow.workspace = true
@@ -29,13 +30,10 @@ reqwest-middleware.workspace = true
 reqwest-retry.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-tikv-jemallocator.workspace = true
 tokio.workspace = true
 url.workspace = true
 
 [dev-dependencies]
 assertor.workspace = true
-assert_cmd.workspace = true
 httpmock.workspace = true
-predicates.workspace = true
 temp-dir.workspace = true
