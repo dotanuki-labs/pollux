@@ -115,16 +115,6 @@ jobs:
   publish:
     needs: build
     runs-on: warp-ubuntu-2404-x64-4x
-    services:
-      local-registry:
-        image: ghcr.io/kellnr/kellnr:5@sha256:2a58332b562df3fab776a5cd56bf6a20dbdcc7bd0553090283012abb4bd9aed0
-        ports:
-          - 8000:8000
-        options: >-
-          --health-cmd "curl -f http://localhost:8000/api/v1/health"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: Project checkout
@@ -135,5 +125,5 @@ jobs:
       - name: Setup Rust tools
         uses: ./.github/actions/setup-rust
 
-      - name: Publish on local registry
-        run: cargo publish -p pollux --registry local # zizmor: ignore[use-trusted-publishing]
+      - name: Dry-run publishing
+        run: cargo publish --workspace --token "not-a-valid-token" --dry-run # zizmor: ignore[use-trusted-publishing]

@@ -128,4 +128,4 @@ jobs:
         uses: ./.github/actions/setup-rust
 
       - name: Publish on crates.io
-        run: cargo publish -p pollux --token ${{ secrets.CRATESIO_PUBLISH_TOKEN }} --dry-run # zizmor: ignore[use-trusted-publishing]
+        run: cargo publish --workspace --token ${{ secrets.CRATESIO_PUBLISH_TOKEN }} # zizmor: ignore[use-trusted-publishing]

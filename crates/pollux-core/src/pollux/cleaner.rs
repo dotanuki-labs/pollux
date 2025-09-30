@@ -3,7 +3,7 @@
 
 use crate::infra::caching::CacheManager;
 
-pub struct PolluxCleaner {
+pub(crate) struct PolluxCleaner {
     cache_manager: CacheManager,
 }
 

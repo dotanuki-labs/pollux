@@ -1580,6 +1580,19 @@ dependencies = [
  "anyhow",
  "assert_cmd",
  "assertor",
+ "pollux-core",
+ "predicates",
+ "temp-dir",
+ "tikv-jemallocator",
+ "tokio",
+]
+
+[[package]]
+name = "pollux-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assertor",
  "better-panic",
  "bytes",
  "cargo-lock",
@@ -1591,7 +1604,6 @@ dependencies = [
  "human-panic",
  "log",
  "packageurl",
- "predicates",
  "ractor",
  "reqwest",
  "reqwest-middleware",
@@ -1599,7 +1611,6 @@ dependencies = [
  "serde",
  "serde_json",
  "temp-dir",
- "tikv-jemallocator",
  "tokio",
  "url",
 ]

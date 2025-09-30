@@ -1,11 +1,11 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::analysers::combined::VeracityChecksAnalyser;
-use crate::core::interfaces::CrateVeracityAnalysis;
-use crate::core::models::{CargoPackage, CrateVeracityChecks};
+use crate::domain::analysers::combined::VeracityChecksAnalyser;
+use crate::domain::interfaces::CrateVeracityAnalysis;
+use crate::domain::models::{CargoPackage, CrateVeracityChecks};
 
-pub struct PolluxChecker {
+pub(crate) struct PolluxChecker {
     veracity_analyser: VeracityChecksAnalyser,
 }
 

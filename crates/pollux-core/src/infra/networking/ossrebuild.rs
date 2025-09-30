@@ -1,8 +1,8 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::interfaces::VeracityFactorCheck;
-use crate::core::models::CargoPackage;
+use crate::domain::interfaces::VeracityFactorCheck;
+use crate::domain::models::CargoPackage;
 use crate::infra::networking::http::HTTPClient;
 use anyhow::bail;
 use reqwest::StatusCode;
@@ -58,8 +58,8 @@ impl VeracityFactorCheck for OssRebuildChecker {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::interfaces::VeracityFactorCheck;
-    use crate::core::models::CargoPackage;
+    use crate::domain::interfaces::VeracityFactorCheck;
+    use crate::domain::models::CargoPackage;
     use crate::infra::networking::http::{HTTP_CLIENT, MAX_HTTP_RETRY_ATTEMPTS};
     use crate::infra::networking::ossrebuild::OssRebuildChecker;
     use assertor::{OptionAssertion, ResultAssertion, StringAssertion};

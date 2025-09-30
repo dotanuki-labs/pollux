@@ -1,20 +1,20 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::analysers::combined::VeracityChecksAnalyser;
-use crate::core::interfaces::CrateVeracityAnalysis;
-use crate::core::models::{AnalysisOutcome, AnalysisResults, CargoPackage, StatisticsForPackages};
+use crate::domain::analysers::combined::VeracityChecksAnalyser;
+use crate::domain::interfaces::CrateVeracityAnalysis;
+use crate::domain::models::{AnalysisOutcome, AnalysisResults, CargoPackage, StatisticsForPackages};
+use crate::factory::MILLIS_TO_WAIT_AFTER_RATE_LIMITED;
 use crate::infra::networking::crates::resolvers::DependenciesResolver;
-use crate::ioc::MILLIS_TO_WAIT_AFTER_RATE_LIMITED;
 use ractor::{Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
 use std::path::Path;
 
-pub enum AnalyserMessage {
+pub(crate) enum AnalyserMessage {
     AnalysePackage(CargoPackage),
     AggregateResults(RpcReplyPort<AnalysisResults>),
 }
 
-pub struct PolluxAnalyser {
+pub(crate) struct PolluxAnalyser {
     dependencies_resolver: DependenciesResolver,
     veracity_analyser: VeracityChecksAnalyser,
 }

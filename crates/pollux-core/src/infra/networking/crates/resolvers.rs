@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::models::CargoPackage;
+use crate::domain::models::CargoPackage;
 use crate::infra::networking::crates::tarballs::CrateArchiveDownloader;
 use anyhow::bail;
 use cargo_lock::Lockfile;
@@ -102,7 +102,7 @@ impl LocalProjectDependenciesResolver {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::models::CargoPackage;
+    use crate::domain::models::CargoPackage;
     use crate::infra::networking::crates::resolvers::LocalProjectDependenciesResolver;
     use assertor::EqualityAssertion;
     use std::fs;
