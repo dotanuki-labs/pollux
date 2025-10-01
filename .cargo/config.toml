@@ -22,3 +22,9 @@ rustflags = ["-Ctarget-feature=+crt-static"]
 
 [alias]
 xtasks = "run --manifest-path ./crates/xtasks/Cargo.toml --"
+
+# Utility for tests
+[registries.local]
+index = "sparse+http://localhost:8000/api/v1/crates/"
+credential-provider = ["cargo:token"]
+token = "Zy9HhJ02RJmg0GCrgLfaCVfU6IwDfhXD"

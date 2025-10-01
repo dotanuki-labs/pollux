@@ -1,8 +1,8 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::domain::interfaces::{AnalyzedDataStorage, VeracityFactorCheck};
-use crate::domain::models::{CargoPackage, CrateVeracityChecks};
+use crate::core::interfaces::{AnalyzedDataStorage, VeracityFactorCheck};
+use crate::core::models::{CargoPackage, CrateVeracityChecks};
 use crate::infra::caching::analysis::AnalysedPackagesCache;
 use crate::infra::networking::crates::OfficialCratesRegistryChecker;
 use crate::infra::networking::ossrebuild::OssRebuildChecker;

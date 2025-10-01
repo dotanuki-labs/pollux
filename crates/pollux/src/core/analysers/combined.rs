@@ -1,9 +1,9 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::domain::analysers::standalone::{BuildReproducibilityChecker, CachedDataChecker, CrateProvenanceChecker};
-use crate::domain::interfaces::{AnalyzedDataStorage, CrateVeracityAnalysis, VeracityFactorCheck};
-use crate::domain::models::{CargoPackage, CrateVeracityChecks};
+use crate::core::analysers::standalone::{BuildReproducibilityChecker, CachedDataChecker, CrateProvenanceChecker};
+use crate::core::interfaces::{AnalyzedDataStorage, CrateVeracityAnalysis, VeracityFactorCheck};
+use crate::core::models::{CargoPackage, CrateVeracityChecks};
 
 pub struct VeracityChecksAnalyser {
     cache: CachedDataChecker,
@@ -59,12 +59,12 @@ impl CrateVeracityAnalysis for VeracityChecksAnalyser {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::analysers::combined::VeracityChecksAnalyser;
-    use crate::domain::analysers::standalone::{
+    use crate::core::analysers::combined::VeracityChecksAnalyser;
+    use crate::core::analysers::standalone::{
         BuildReproducibilityChecker, CachedDataChecker, CrateProvenanceChecker, FakeVeracityChecker,
     };
-    use crate::domain::interfaces::CrateVeracityAnalysis;
-    use crate::domain::models::{CargoPackage, CrateVeracityChecks};
+    use crate::core::interfaces::CrateVeracityAnalysis;
+    use crate::core::models::{CargoPackage, CrateVeracityChecks};
     use assertor::EqualityAssertion;
     use std::collections::HashMap;
     use std::str::FromStr;

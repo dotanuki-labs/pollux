@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::domain::models::{CargoPackage, CleanupScope};
+use crate::core::models::{CargoPackage, CleanupScope};
 use crate::infra::cli::parsing::MainCommands::Analyse;
 use crate::pollux::PolluxTask;
 use anyhow::bail;
