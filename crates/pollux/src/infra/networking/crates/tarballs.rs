@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::domain::models::CargoPackage;
+use crate::core::models::CargoPackage;
 use crate::infra::caching::CacheManager;
 use crate::infra::networking::crates::registry::CratesDotIOClient;
 use anyhow::Context;

@@ -1,8 +1,8 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::domain::analysers::combined::VeracityChecksAnalyser;
-use crate::domain::analysers::standalone::{BuildReproducibilityChecker, CachedDataChecker, CrateProvenanceChecker};
+use crate::core::analysers::combined::VeracityChecksAnalyser;
+use crate::core::analysers::standalone::{BuildReproducibilityChecker, CachedDataChecker, CrateProvenanceChecker};
 use crate::infra::caching::CacheManager;
 use crate::infra::caching::analysis::AnalysedPackagesCache;
 use crate::infra::cli::reporter::ConsoleReporter;
@@ -18,7 +18,7 @@ use crate::pollux::analyser::PolluxAnalyser;
 use crate::pollux::checker::PolluxChecker;
 use crate::pollux::cleaner::PolluxCleaner;
 
-pub(crate) static MILLIS_TO_WAIT_AFTER_RATE_LIMITED: u64 = 1100;
+pub static MILLIS_TO_WAIT_AFTER_RATE_LIMITED: u64 = 1100;
 
 fn cratesio_client() -> CratesDotIOClient {
     CratesDotIOClient::new(

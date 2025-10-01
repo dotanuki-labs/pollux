@@ -1,8 +1,8 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::domain::interfaces::VeracityFactorCheck;
-use crate::domain::models::CargoPackage;
+use crate::core::interfaces::VeracityFactorCheck;
+use crate::core::models::CargoPackage;
 use crate::infra::networking::crates::registry::CratesDotIOClient;
 use url::Url;
 
@@ -44,8 +44,8 @@ impl VeracityFactorCheck for OfficialCratesRegistryChecker {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::interfaces::VeracityFactorCheck;
-    use crate::domain::models::CargoPackage;
+    use crate::core::interfaces::VeracityFactorCheck;
+    use crate::core::models::CargoPackage;
     use crate::infra::networking::crates::OfficialCratesRegistryChecker;
     use crate::infra::networking::crates::registry::CratesDotIOClient;
     use crate::infra::networking::http::{HTTP_CLIENT, MAX_HTTP_RETRY_ATTEMPTS};

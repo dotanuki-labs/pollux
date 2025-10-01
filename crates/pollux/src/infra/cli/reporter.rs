@@ -1,10 +1,11 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::domain::models::{AnalysisResults, CargoPackage, CleanupScope, CrateVeracityChecks};
+use crate::core::models::{AnalysisResults, CargoPackage, CleanupScope, CrateVeracityChecks};
 use console::{StyledObject, style};
 
-pub(crate) struct ConsoleReporter {
+#[derive(Default)]
+pub struct ConsoleReporter {
     use_colors: bool,
 }
 

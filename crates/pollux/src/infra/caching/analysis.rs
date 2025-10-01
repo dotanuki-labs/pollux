@@ -1,8 +1,8 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::domain::interfaces::AnalyzedDataStorage;
-use crate::domain::models::{CargoPackage, CrateVeracityChecks};
+use crate::core::interfaces::AnalyzedDataStorage;
+use crate::core::models::{CargoPackage, CrateVeracityChecks};
 use crate::infra::caching::CacheManager;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

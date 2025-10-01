@@ -1,11 +1,11 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-pub(crate) mod analyser;
-pub(crate) mod checker;
-pub(crate) mod cleaner;
+pub mod analyser;
+pub mod checker;
+pub mod cleaner;
 
-use crate::domain::models::{CargoPackage, CleanupScope};
+use crate::core::models::{CargoPackage, CleanupScope};
 use crate::infra::cli::reporter::ConsoleReporter;
 use crate::pollux::PolluxTask::{
     AnalyseRustCrate, AnalyseRustProject, CheckRustCrate, CleanupAnalysedData, CleanupEverything, CleanupPackageSource,
@@ -32,7 +32,7 @@ pub struct Pollux {
 }
 
 impl Pollux {
-    pub(crate) fn new(
+    pub fn new(
         cleaner: PolluxCleaner,
         analyser: PolluxAnalyser,
         checker: PolluxChecker,
