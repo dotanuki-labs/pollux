@@ -4,12 +4,12 @@
 pub mod analyser;
 pub mod checker;
 pub mod cleaner;
+pub mod inquirer;
 
 use crate::core::models::{CargoPackage, CleanupScope};
 use crate::infra::cli::reporter::ConsoleReporter;
-use crate::pollux::PolluxTask::{
-    AnalyseRustCrate, AnalyseRustProject, CheckRustCrate, CleanupAnalysedData, CleanupEverything, CleanupPackageSource,
-};
+use crate::pollux::PolluxTask::*;
+use crate::pollux::inquirer::PolluxInquirer;
 use analyser::PolluxAnalyser;
 use checker::PolluxChecker;
 use cleaner::PolluxCleaner;
@@ -22,12 +22,14 @@ pub enum PolluxTask {
     CleanupAnalysedData,
     CleanupPackageSource,
     CleanupEverything,
+    InquirePopularCrates,
 }
 
 pub struct Pollux {
     cleaner: PolluxCleaner,
     analyser: PolluxAnalyser,
     checker: PolluxChecker,
+    inquirer: PolluxInquirer,
     console_reporter: ConsoleReporter,
 }
 
@@ -36,49 +38,74 @@ impl Pollux {
         cleaner: PolluxCleaner,
         analyser: PolluxAnalyser,
         checker: PolluxChecker,
+        inquirer: PolluxInquirer,
         console_reporter: ConsoleReporter,
     ) -> Self {
         Self {
             cleaner,
             analyser,
             checker,
+            inquirer,
             console_reporter,
         }
     }
 
     pub async fn execute(self, task: PolluxTask) -> anyhow::Result<()> {
         match task {
-            AnalyseRustProject(project_root) => {
-                self.console_reporter.report_analyser_started();
-                let results = self.analyser.analyse_project(project_root.as_path()).await?;
-                self.console_reporter.report_analyser_outcomes(&results);
-            },
-            AnalyseRustCrate(cargo_package) => {
-                self.console_reporter.report_analyser_started();
-                let results = self.analyser.analyse_package(&cargo_package).await?;
-                self.console_reporter.report_analyser_outcomes(&results);
-            },
-            CheckRustCrate(cargo_package) => {
-                self.console_reporter.report_checker_started(&cargo_package);
-                let check = self.checker.check_package(&cargo_package).await?;
-                self.console_reporter.report_checker_outcomes(check);
-            },
-            CleanupEverything => {
-                self.cleaner.cleanup_everything();
-                self.console_reporter.report_cleaning_finished(CleanupScope::Everything)
-            },
-            CleanupPackageSource => {
-                self.cleaner.cleanup_package_sources();
-                self.console_reporter
-                    .report_cleaning_finished(CleanupScope::PackageSources)
-            },
-            CleanupAnalysedData => {
-                self.cleaner.cleanup_analysed_data();
-                self.console_reporter
-                    .report_cleaning_finished(CleanupScope::AnalysedData)
-            },
+            AnalyseRustProject(project_root) => self.analyse_rust_project(project_root).await?,
+            AnalyseRustCrate(cargo_package) => self.analyse_cargo_package(&cargo_package).await?,
+            CheckRustCrate(cargo_package) => self.check_individual_crate(&cargo_package).await?,
+            CleanupEverything => self.cleanup_everything(),
+            CleanupPackageSource => self.cleanup_packages(),
+            CleanupAnalysedData => self.cleanup_analysed_data(),
+            InquirePopularCrates => self.inquire_popular_crates().await?,
         }
 
+        Ok(())
+    }
+
+    async fn analyse_cargo_package(self, cargo_package: &CargoPackage) -> anyhow::Result<()> {
+        self.console_reporter.report_pollux_started();
+        let results = self.analyser.analyse_package(cargo_package).await?;
+        self.console_reporter.report_analyser_outcomes(&results);
+        Ok(())
+    }
+
+    async fn analyse_rust_project(self, project_root: PathBuf) -> anyhow::Result<()> {
+        self.console_reporter.report_pollux_started();
+        let results = self.analyser.analyse_project(project_root.as_path()).await?;
+        self.console_reporter.report_analyser_outcomes(&results);
+        Ok(())
+    }
+
+    async fn check_individual_crate(self, cargo_package: &CargoPackage) -> anyhow::Result<()> {
+        self.console_reporter.report_checker_started(cargo_package);
+        let check = self.checker.check_package(cargo_package).await?;
+        self.console_reporter.report_checker_outcomes(check);
+        Ok(())
+    }
+
+    fn cleanup_everything(self) {
+        self.cleaner.cleanup_everything();
+        self.console_reporter.report_cleaning_finished(CleanupScope::Everything)
+    }
+
+    fn cleanup_analysed_data(self) {
+        self.cleaner.cleanup_analysed_data();
+        self.console_reporter
+            .report_cleaning_finished(CleanupScope::AnalysedData)
+    }
+
+    fn cleanup_packages(self) {
+        self.cleaner.cleanup_package_sources();
+        self.console_reporter
+            .report_cleaning_finished(CleanupScope::PackageSources)
+    }
+
+    async fn inquire_popular_crates(&self) -> anyhow::Result<()> {
+        self.console_reporter.report_pollux_started();
+        let outcomes = self.inquirer.scrutinize_most_popular_crates().await?;
+        self.console_reporter.report_ecosystem_scrutinized(&outcomes);
         Ok(())
     }
 }

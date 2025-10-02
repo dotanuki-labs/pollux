@@ -6,10 +6,10 @@ use crate::core::analysers::standalone::{BuildReproducibilityChecker, CachedData
 use crate::infra::caching::CacheManager;
 use crate::infra::caching::analysis::AnalysedPackagesCache;
 use crate::infra::cli::reporter::ConsoleReporter;
-use crate::infra::networking::crates::OfficialCratesRegistryChecker;
 use crate::infra::networking::crates::registry::CratesDotIOClient;
 use crate::infra::networking::crates::resolvers::DependenciesResolver;
 use crate::infra::networking::crates::tarballs::CrateArchiveDownloader;
+use crate::infra::networking::crates::{OfficialCratesRegistryChecker, PopularCratesFetcher};
 use crate::infra::networking::http::HTTP_CLIENT;
 use crate::infra::networking::ossrebuild::OssRebuildChecker;
 use crate::infra::networking::{crates, ossrebuild};
@@ -17,6 +17,7 @@ use crate::pollux::Pollux;
 use crate::pollux::analyser::PolluxAnalyser;
 use crate::pollux::checker::PolluxChecker;
 use crate::pollux::cleaner::PolluxCleaner;
+use crate::pollux::inquirer::PolluxInquirer;
 
 pub static MILLIS_TO_WAIT_AFTER_RATE_LIMITED: u64 = 1100;
 
@@ -52,6 +53,10 @@ fn dependencies_resolver() -> DependenciesResolver {
     DependenciesResolver::new(downloader)
 }
 
+fn popular_crates_fetcher() -> PopularCratesFetcher {
+    PopularCratesFetcher::new(cratesio_client())
+}
+
 fn pollux_analyser() -> PolluxAnalyser {
     PolluxAnalyser::new(dependencies_resolver(), veracity_analyser())
 }
@@ -64,11 +69,16 @@ fn pollux_cleaner() -> PolluxCleaner {
     PolluxCleaner::new(CacheManager::get())
 }
 
+fn pollux_scrutinizer() -> PolluxInquirer {
+    PolluxInquirer::new(popular_crates_fetcher(), veracity_analyser())
+}
+
 pub fn create_pollux(turnoff_colors: bool) -> Pollux {
     Pollux::new(
         pollux_cleaner(),
         pollux_analyser(),
         pollux_checker(),
+        pollux_scrutinizer(),
         ConsoleReporter::new(turnoff_colors),
     )
 }

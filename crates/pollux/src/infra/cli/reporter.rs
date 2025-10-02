@@ -1,7 +1,10 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::models::{AnalysisResults, CargoPackage, CleanupScope, CrateVeracityChecks};
+use crate::core::models::{
+    AnalysisResults, CargoPackage, CleanupScope, CrateVeracityChecks, EcosystemInquiringResults,
+};
+use comfy_table::Table;
 use console::{StyledObject, style};
 
 #[derive(Default)]
@@ -14,9 +17,9 @@ impl ConsoleReporter {
         Self { use_colors }
     }
 
-    pub fn report_analyser_started(&self) {
+    pub fn report_pollux_started(&self) {
         println!();
-        println!("Analysing veracity for packages. This operation may take some time ...");
+        println!("Analysing packages. This operation may take some time ...");
     }
 
     pub fn report_analyser_outcomes(&self, results: &AnalysisResults) {
@@ -84,6 +87,46 @@ impl ConsoleReporter {
 
         println!();
         println!("{}", self.cyan(output));
+        println!();
+    }
+
+    pub fn report_ecosystem_scrutinized(&self, results: &EcosystemInquiringResults) {
+        println!();
+        println!("Statistics : ");
+        println!();
+        println!("• total packages analysed : {}", self.cyan(results.outcomes.len()));
+        println!(
+            "• with provenance attested : {:.1} %",
+            self.cyan(results.percentual_presence_of_provance * 100.0)
+        );
+        println!(
+            "• with reproducible builds : {:.1} %",
+            self.cyan(results.percentual_presence_of_reproducibility * 100.0)
+        );
+        println!();
+        println!("Veracity factors : ");
+        println!();
+
+        let mut table = Table::new();
+        table.set_header(vec!["Crate name", "Checked versions", "Provenance", "Reproducibility"]);
+        results.outcomes.iter().for_each(|(package, veracity_check)| {
+            let row = vec![
+                package.name.as_str(),
+                package.version.as_str(),
+                match veracity_check.provenance_evidence {
+                    None => "no",
+                    Some(_) => "yes",
+                },
+                match veracity_check.reproducibility_evidence {
+                    None => "no",
+                    Some(_) => "yes",
+                },
+            ];
+
+            table.add_row(row);
+        });
+
+        println!("{table}");
         println!();
     }
 

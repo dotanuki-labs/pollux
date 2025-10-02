@@ -78,6 +78,7 @@ pub enum CleanupScope {
 }
 
 pub type AnalysisOutcome = (CargoPackage, Option<CrateVeracityChecks>);
+pub type InquiringOutcome = (CargoPackage, CrateVeracityChecks);
 
 pub struct StatisticsForPackages {
     pub total: usize,
@@ -88,4 +89,10 @@ pub struct StatisticsForPackages {
 pub struct AnalysisResults {
     pub statistics: StatisticsForPackages,
     pub outcomes: Vec<AnalysisOutcome>,
+}
+
+pub struct EcosystemInquiringResults {
+    pub percentual_presence_of_provance: f32,
+    pub percentual_presence_of_reproducibility: f32,
+    pub outcomes: Vec<InquiringOutcome>,
 }

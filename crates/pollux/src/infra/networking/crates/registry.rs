@@ -26,6 +26,17 @@ pub struct CrateVersionDetails {
     pub version: InfoForCrateVersion,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct PaginatedCratesListing {
+    pub crates: Vec<CrateOverview>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CrateOverview {
+    pub name: String,
+    pub default_version: String,
+}
+
 pub struct CratesDotIOClient {
     base_url: String,
     http_client: Arc<HTTPClient>,
@@ -39,6 +50,27 @@ impl CratesDotIOClient {
             http_client,
             enforced_delay,
         }
+    }
+
+    pub async fn get_most_downloaded_crates(&self, page: u8, per_page: u8) -> anyhow::Result<PaginatedCratesListing> {
+        let endpoint = format!("{}/api/v1/crates", self.base_url);
+        let query_arguments = [
+            ("page", page.to_string()),
+            ("per_page", per_page.to_string()),
+            ("sort", "downloads".to_string()),
+        ];
+
+        let paged = self
+            .http_client
+            .get(&endpoint)
+            .query(&query_arguments)
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<PaginatedCratesListing>()
+            .await?;
+
+        Ok(paged)
     }
 
     pub async fn get_crate_version_details(
