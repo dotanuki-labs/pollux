@@ -17,6 +17,7 @@ better-panic.workspace = true
 bytes.workspace = true
 cargo-lock.workspace = true
 clap.workspace = true
+comfy-table.workspace = true
 console.workspace = true
 decompress.workspace = true
 env_logger.workspace = true

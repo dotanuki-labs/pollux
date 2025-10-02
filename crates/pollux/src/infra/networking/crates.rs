@@ -42,6 +42,41 @@ impl VeracityFactorCheck for OfficialCratesRegistryChecker {
     }
 }
 
+pub struct PopularCratesFetcher {
+    cratesio_client: CratesDotIOClient,
+}
+
+impl PopularCratesFetcher {
+    pub fn new(cratesio_client: CratesDotIOClient) -> Self {
+        Self { cratesio_client }
+    }
+
+    pub async fn get_most_popular_crates(&self) -> anyhow::Result<Vec<CargoPackage>> {
+        let pages_to_query = 10;
+        let per_page = 100;
+
+        let mut results = vec![];
+
+        for page in 1..=pages_to_query {
+            let paged = self.cratesio_client.get_most_downloaded_crates(page, per_page).await?;
+
+            if paged.crates.is_empty() {
+                break;
+            }
+
+            let mut cargo_pkgs = paged
+                .crates
+                .into_iter()
+                .map(|overview| CargoPackage::new(overview.name, overview.default_version))
+                .collect::<Vec<_>>();
+
+            results.append(&mut cargo_pkgs);
+        }
+
+        Ok(results)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::core::interfaces::VeracityFactorCheck;

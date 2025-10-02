@@ -68,6 +68,8 @@ enum MainCommands {
     Cleanup(CleanupArguments),
     /// Analyse veracity checks for a target Rust project or crate
     Analyse(AnalysisArguments),
+    /// Evaluate veracity checks for the top packages served by crates.io
+    Inquire,
 }
 
 pub fn parse_arguments() -> anyhow::Result<(PolluxTask, bool)> {
@@ -96,6 +98,7 @@ pub fn parse_arguments() -> anyhow::Result<(PolluxTask, bool)> {
             let cargo_package = CargoPackage::try_from(args.input)?;
             (PolluxTask::CheckRustCrate(cargo_package), args.no_color)
         },
+        MainCommands::Inquire => (PolluxTask::InquirePopularCrates, false),
     };
 
     Ok((task, turnoff_colors))
