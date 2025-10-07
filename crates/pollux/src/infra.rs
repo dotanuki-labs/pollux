@@ -4,3 +4,4 @@
 pub mod caching;
 pub mod cli;
 pub mod networking;
+pub mod reporting;

@@ -6,8 +6,9 @@ pub mod checker;
 pub mod cleaner;
 pub mod inquirer;
 
-use crate::core::models::{CargoPackage, CleanupScope};
-use crate::infra::cli::reporter::ConsoleReporter;
+use crate::core::models::{CargoPackage, CleanupScope, InquireReportKind};
+use crate::infra::reporting::console::ConsoleReporter;
+use crate::infra::reporting::html::HtmlReporter;
 use crate::pollux::PolluxTask::*;
 use crate::pollux::inquirer::PolluxInquirer;
 use analyser::PolluxAnalyser;
@@ -22,7 +23,7 @@ pub enum PolluxTask {
     CleanupAnalysedData,
     CleanupPackageSource,
     CleanupEverything,
-    InquirePopularCrates,
+    InquirePopularCrates(InquireReportKind),
 }
 
 pub struct Pollux {
@@ -31,6 +32,7 @@ pub struct Pollux {
     checker: PolluxChecker,
     inquirer: PolluxInquirer,
     console_reporter: ConsoleReporter,
+    html_reporter: HtmlReporter,
 }
 
 impl Pollux {
@@ -40,6 +42,7 @@ impl Pollux {
         checker: PolluxChecker,
         inquirer: PolluxInquirer,
         console_reporter: ConsoleReporter,
+        html_reporter: HtmlReporter,
     ) -> Self {
         Self {
             cleaner,
@@ -47,6 +50,7 @@ impl Pollux {
             checker,
             inquirer,
             console_reporter,
+            html_reporter,
         }
     }
 
@@ -58,7 +62,7 @@ impl Pollux {
             CleanupEverything => self.cleanup_everything(),
             CleanupPackageSource => self.cleanup_packages(),
             CleanupAnalysedData => self.cleanup_analysed_data(),
-            InquirePopularCrates => self.inquire_popular_crates().await?,
+            InquirePopularCrates(report_kind) => self.inquire_popular_crates(report_kind).await?,
         }
 
         Ok(())
@@ -102,10 +106,17 @@ impl Pollux {
             .report_cleaning_finished(CleanupScope::PackageSources)
     }
 
-    async fn inquire_popular_crates(&self) -> anyhow::Result<()> {
+    async fn inquire_popular_crates(&self, report_kind: InquireReportKind) -> anyhow::Result<()> {
         self.console_reporter.report_pollux_started();
-        let outcomes = self.inquirer.scrutinize_most_popular_crates().await?;
-        self.console_reporter.report_ecosystem_scrutinized(&outcomes);
+
+        match report_kind {
+            InquireReportKind::Console => {
+                let outcomes = self.inquirer.scrutinize_most_popular_crates().await?;
+                self.console_reporter.report_ecosystem_inquired(&outcomes)
+            },
+            InquireReportKind::Html => self.html_reporter.report_ecosystem_inquired(),
+        }
+
         Ok(())
     }
 }
