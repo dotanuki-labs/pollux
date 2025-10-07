@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::models::{CargoPackage, CleanupScope};
+use crate::core::models::{CargoPackage, CleanupScope, InquireReportKind};
 use crate::infra::cli::parsing::MainCommands::Analyse;
 use crate::pollux::PolluxTask;
 use anyhow::bail;
@@ -25,7 +25,13 @@ struct AnalysisArguments {
     pub input: String,
 
     /// Whether to use colored output
-    #[arg(short, long, action, default_value = "false", help = "Turn off colored output")]
+    #[arg(
+        short,
+        long,
+        action,
+        default_value = "false",
+        help = "Dont use colors on console output"
+    )]
     pub no_color: bool,
 }
 
@@ -36,7 +42,13 @@ struct CheckArguments {
     pub input: String,
 
     /// Whether to use colored output
-    #[arg(short, long, action, default_value = "false", help = "Turn off colored output")]
+    #[arg(
+        short,
+        long,
+        action,
+        default_value = "false",
+        help = "Dont use colors on console output"
+    )]
     pub no_color: bool,
 }
 
@@ -48,7 +60,31 @@ struct CleanupArguments {
     pub mode: CleanupScope,
 
     /// Whether to use colored output
-    #[arg(short, long, action, default_value = "false", help = "Turn off colored output")]
+    #[arg(
+        short,
+        long,
+        action,
+        default_value = "false",
+        help = "Dont use colors on console output"
+    )]
+    pub no_color: bool,
+}
+
+#[derive(Args, Debug)]
+#[command(version, about, long_about = None)]
+struct InquiringArguments {
+    /// Output type for inquiring reports
+    #[arg(short, long, value_enum, default_value = "console")]
+    pub output: InquireReportKind,
+
+    /// Whether to use colored output
+    #[arg(
+        short,
+        long,
+        action,
+        default_value = "false",
+        help = "Dont use colors on console output"
+    )]
     pub no_color: bool,
 }
 
@@ -69,7 +105,7 @@ enum MainCommands {
     /// Analyse veracity checks for a target Rust project or crate
     Analyse(AnalysisArguments),
     /// Evaluate veracity checks for the top packages served by crates.io
-    Inquire,
+    Inquire(InquiringArguments),
 }
 
 pub fn parse_arguments() -> anyhow::Result<(PolluxTask, bool)> {
@@ -98,7 +134,7 @@ pub fn parse_arguments() -> anyhow::Result<(PolluxTask, bool)> {
             let cargo_package = CargoPackage::try_from(args.input)?;
             (PolluxTask::CheckRustCrate(cargo_package), args.no_color)
         },
-        MainCommands::Inquire => (PolluxTask::InquirePopularCrates, false),
+        MainCommands::Inquire(args) => (PolluxTask::InquirePopularCrates(args.output), args.no_color),
     };
 
     Ok((task, turnoff_colors))

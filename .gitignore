@@ -3,9 +3,11 @@
 artifacts
 pollux.cdx.json
 xtasks.cdx.json
+pollux-report.html
 
 # IDE environment
 .fleet
 .DS_STORE
 .idea
+
 

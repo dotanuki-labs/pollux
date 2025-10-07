@@ -5,7 +5,6 @@ use crate::core::analysers::combined::VeracityChecksAnalyser;
 use crate::core::analysers::standalone::{BuildReproducibilityChecker, CachedDataChecker, CrateProvenanceChecker};
 use crate::infra::caching::CacheManager;
 use crate::infra::caching::analysis::AnalysedPackagesCache;
-use crate::infra::cli::reporter::ConsoleReporter;
 use crate::infra::networking::crates::registry::CratesDotIOClient;
 use crate::infra::networking::crates::resolvers::DependenciesResolver;
 use crate::infra::networking::crates::tarballs::CrateArchiveDownloader;
@@ -13,6 +12,8 @@ use crate::infra::networking::crates::{OfficialCratesRegistryChecker, PopularCra
 use crate::infra::networking::http::HTTP_CLIENT;
 use crate::infra::networking::ossrebuild::OssRebuildChecker;
 use crate::infra::networking::{crates, ossrebuild};
+use crate::infra::reporting::console::ConsoleReporter;
+use crate::infra::reporting::html::HtmlReporter;
 use crate::pollux::Pollux;
 use crate::pollux::analyser::PolluxAnalyser;
 use crate::pollux::checker::PolluxChecker;
@@ -80,5 +81,6 @@ pub fn create_pollux(turnoff_colors: bool) -> Pollux {
         pollux_checker(),
         pollux_scrutinizer(),
         ConsoleReporter::new(turnoff_colors),
+        HtmlReporter::default(),
     )
 }

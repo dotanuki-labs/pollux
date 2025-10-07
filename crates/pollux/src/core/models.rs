@@ -77,6 +77,12 @@ pub enum CleanupScope {
     PackageSources,
 }
 
+#[derive(ValueEnum, Debug, Clone)]
+pub enum InquireReportKind {
+    Console,
+    Html,
+}
+
 pub type AnalysisOutcome = (CargoPackage, Option<CrateVeracityChecks>);
 pub type InquiringOutcome = (CargoPackage, CrateVeracityChecks);
 

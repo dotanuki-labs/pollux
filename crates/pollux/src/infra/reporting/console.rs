@@ -90,7 +90,7 @@ impl ConsoleReporter {
         println!();
     }
 
-    pub fn report_ecosystem_scrutinized(&self, results: &EcosystemInquiringResults) {
+    pub fn report_ecosystem_inquired(&self, results: &EcosystemInquiringResults) {
         println!();
         println!("Statistics : ");
         println!();
