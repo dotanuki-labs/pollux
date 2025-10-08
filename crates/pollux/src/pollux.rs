@@ -108,13 +108,11 @@ impl Pollux {
 
     async fn inquire_popular_crates(&self, report_kind: InquireReportKind) -> anyhow::Result<()> {
         self.console_reporter.report_pollux_started();
+        let outcomes = self.inquirer.inquire_most_popular_crates().await?;
 
         match report_kind {
-            InquireReportKind::Console => {
-                let outcomes = self.inquirer.scrutinize_most_popular_crates().await?;
-                self.console_reporter.report_ecosystem_inquired(&outcomes)
-            },
-            InquireReportKind::Html => self.html_reporter.report_ecosystem_inquired(),
+            InquireReportKind::Console => self.console_reporter.report_ecosystem_inquired(&outcomes),
+            InquireReportKind::Html => self.html_reporter.report_ecosystem_inquired(&outcomes),
         }
 
         Ok(())

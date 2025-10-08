@@ -3,11 +3,12 @@
 
 use clap::ValueEnum;
 use packageurl::PackageUrl;
+use serde::Serialize;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use url::Url;
 
-#[derive(Clone, Debug, PartialEq, Hash, Eq)]
+#[derive(Clone, Debug, PartialEq, Hash, Eq, Serialize)]
 pub struct CargoPackage {
     pub name: String,
     pub version: String,
@@ -44,7 +45,7 @@ impl Display for CargoPackage {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Hash, Eq)]
+#[derive(Clone, Debug, PartialEq, Hash, Eq, Serialize)]
 pub struct CrateVeracityChecks {
     pub provenance_evidence: Option<Url>,
     pub reproducibility_evidence: Option<Url>,
@@ -84,7 +85,6 @@ pub enum InquireReportKind {
 }
 
 pub type AnalysisOutcome = (CargoPackage, Option<CrateVeracityChecks>);
-pub type InquiringOutcome = (CargoPackage, CrateVeracityChecks);
 
 pub struct StatisticsForPackages {
     pub total: usize,
@@ -97,8 +97,18 @@ pub struct AnalysisResults {
     pub outcomes: Vec<AnalysisOutcome>,
 }
 
+#[derive(Serialize, Debug)]
+pub struct InquiringOutcome {
+    pub cargo_package: CargoPackage,
+    pub checks: CrateVeracityChecks,
+}
+
+#[derive(Serialize, Debug)]
 pub struct EcosystemInquiringResults {
-    pub percentual_presence_of_provance: f32,
-    pub percentual_presence_of_reproducibility: f32,
+    pub total_crates_inquired: u32,
+    pub total_crates_with_provenance: u32,
+    pub total_crates_with_reproducibility: u32,
+    pub presence_of_provenance: String,
+    pub presence_of_reproducibility: String,
     pub outcomes: Vec<InquiringOutcome>,
 }
