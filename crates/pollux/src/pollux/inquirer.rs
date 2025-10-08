@@ -3,7 +3,7 @@
 
 use crate::core::analysers::combined::VeracityChecksAnalyser;
 use crate::core::interfaces::CrateVeracityAnalysis;
-use crate::core::models::EcosystemInquiringResults;
+use crate::core::models::{EcosystemInquiringResults, InquiringOutcome};
 use crate::infra::networking::crates::PopularCratesFetcher;
 
 pub struct PolluxInquirer {
@@ -19,15 +19,15 @@ impl PolluxInquirer {
         }
     }
 
-    pub async fn scrutinize_most_popular_crates(&self) -> anyhow::Result<EcosystemInquiringResults> {
+    pub async fn inquire_most_popular_crates(&self) -> anyhow::Result<EcosystemInquiringResults> {
         let popular_packages = self.popular_crates_fetcher.get_most_popular_crates().await?;
 
-        let mut scrutinized_packages = vec![];
+        let mut inquired_packages = vec![];
         let mut with_provenance = 0;
         let mut with_reproducibility = 0;
 
-        for package in popular_packages {
-            let checks = self.veracity_analyser.execute(&package).await?;
+        for cargo_package in popular_packages {
+            let checks = self.veracity_analyser.execute(&cargo_package).await?;
 
             match (&checks.provenance_evidence, &checks.reproducibility_evidence) {
                 (Some(_), Some(_)) => {
@@ -42,19 +42,22 @@ impl PolluxInquirer {
                 },
 
                 (None, None) => {
-                    log::info!("[pollux.scrutinizer] not counting crate {}", package);
+                    log::info!("[pollux.inquirer] not counting crate {}", cargo_package);
                 },
             }
 
-            scrutinized_packages.push((package, checks));
+            inquired_packages.push(InquiringOutcome { cargo_package, checks });
         }
 
-        let total_packages = scrutinized_packages.len();
+        let total_packages = inquired_packages.len() as u32;
 
         let results = EcosystemInquiringResults {
-            percentual_presence_of_provance: (with_provenance / total_packages) as f32,
-            percentual_presence_of_reproducibility: (with_reproducibility / total_packages) as f32,
-            outcomes: scrutinized_packages,
+            total_crates_inquired: total_packages,
+            total_crates_with_provenance: with_provenance,
+            total_crates_with_reproducibility: with_reproducibility,
+            presence_of_provenance: format!("{}", 100 * with_provenance / total_packages),
+            presence_of_reproducibility: format!("{}", 100 * with_reproducibility / total_packages),
+            outcomes: inquired_packages,
         };
 
         Ok(results)

@@ -23,6 +23,7 @@ decompress.workspace = true
 env_logger.workspace = true
 human-panic.workspace = true
 log.workspace = true
+minijinja.workspace = true
 ractor.workspace = true
 packageurl.workspace = true
 reqwest.workspace = true

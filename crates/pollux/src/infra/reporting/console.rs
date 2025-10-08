@@ -96,12 +96,12 @@ impl ConsoleReporter {
         println!();
         println!("• total packages analysed : {}", self.cyan(results.outcomes.len()));
         println!(
-            "• with provenance attested : {:.1} %",
-            self.cyan(results.percentual_presence_of_provance * 100.0)
+            "• with provenance attested : {} %",
+            self.cyan(&results.presence_of_provenance)
         );
         println!(
-            "• with reproducible builds : {:.1} %",
-            self.cyan(results.percentual_presence_of_reproducibility * 100.0)
+            "• with reproducible builds : {} %",
+            self.cyan(&results.presence_of_reproducibility)
         );
         println!();
         println!("Veracity factors : ");
@@ -109,15 +109,15 @@ impl ConsoleReporter {
 
         let mut table = Table::new();
         table.set_header(vec!["Crate name", "Checked versions", "Provenance", "Reproducibility"]);
-        results.outcomes.iter().for_each(|(package, veracity_check)| {
+        results.outcomes.iter().for_each(|outcome| {
             let row = vec![
-                package.name.as_str(),
-                package.version.as_str(),
-                match veracity_check.provenance_evidence {
+                outcome.cargo_package.name.as_str(),
+                outcome.cargo_package.version.as_str(),
+                match outcome.checks.provenance_evidence {
                     None => "no",
                     Some(_) => "yes",
                 },
-                match veracity_check.reproducibility_evidence {
+                match outcome.checks.reproducibility_evidence {
                     None => "no",
                     Some(_) => "yes",
                 },
