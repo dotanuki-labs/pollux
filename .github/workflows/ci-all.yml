@@ -36,7 +36,7 @@ jobs:
       contents: read
 
   all-checks:
-    runs-on: warp-ubuntu-2204-arm64-2x
+    runs-on: ubuntu-24.04
     needs: [compliance, docs, rust, docker]
     permissions:
       contents: read

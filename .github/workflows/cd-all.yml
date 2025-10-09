@@ -31,7 +31,7 @@ jobs:
       CRATESIO_PUBLISH_TOKEN: ${{ secrets.CRATESIO_PUBLISH_TOKEN }}
 
   all-deploys:
-    runs-on: warp-ubuntu-2204-arm64-2x
+    runs-on: ubuntu-24.04
     needs: [docs, docker, rust]
     permissions:
       contents: read
