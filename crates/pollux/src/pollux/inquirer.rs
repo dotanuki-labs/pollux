@@ -3,7 +3,7 @@
 
 use crate::core::analysers::combined::VeracityChecksAnalyser;
 use crate::core::interfaces::CrateVeracityAnalysis;
-use crate::core::models::{EcosystemInquiringResults, InquiringOutcome};
+use crate::core::models::{EcosystemInquiringResults, InquireCoverage, InquiringOutcome};
 use crate::infra::networking::crates::PopularCratesFetcher;
 
 pub struct PolluxInquirer {
@@ -19,8 +19,11 @@ impl PolluxInquirer {
         }
     }
 
-    pub async fn inquire_most_popular_crates(&self) -> anyhow::Result<EcosystemInquiringResults> {
-        let popular_packages = self.popular_crates_fetcher.get_most_popular_crates().await?;
+    pub async fn inquire_most_popular_crates(
+        &self,
+        coverage: InquireCoverage,
+    ) -> anyhow::Result<EcosystemInquiringResults> {
+        let popular_packages = self.popular_crates_fetcher.get_most_popular_crates(coverage).await?;
 
         let mut inquired_packages = vec![];
         let mut with_trusted_publishing = 0;

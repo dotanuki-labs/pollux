@@ -1,7 +1,7 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::models::{CargoPackage, CleanupScope, InquireReportKind};
+use crate::core::models::{CargoPackage, CleanupScope, InquireCoverage, InquireReportKind};
 use crate::infra::cli::parsing::MainCommands::Analyse;
 use crate::pollux::PolluxTask;
 use anyhow::bail;
@@ -77,6 +77,10 @@ struct InquiringArguments {
     #[arg(short, long, value_enum, default_value = "console")]
     pub output: InquireReportKind,
 
+    /// How many popular crates to cover (small: 50, medium: 500, large: 1000, huge: 5000)
+    #[arg(short, long, value_enum, default_value = "small")]
+    pub coverage: InquireCoverage,
+
     /// Whether to use colored output
     #[arg(
         short,
@@ -134,7 +138,10 @@ pub fn parse_arguments() -> anyhow::Result<(PolluxTask, bool)> {
             let cargo_package = CargoPackage::try_from(args.input)?;
             (PolluxTask::CheckRustCrate(cargo_package), args.no_color)
         },
-        MainCommands::Inquire(args) => (PolluxTask::InquirePopularCrates(args.output), args.no_color),
+        MainCommands::Inquire(args) => (
+            PolluxTask::InquirePopularCrates(args.output, args.coverage),
+            args.no_color,
+        ),
     };
 
     Ok((task, turnoff_colors))

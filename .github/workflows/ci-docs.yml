@@ -24,9 +24,16 @@ jobs:
       - name: Setup Rust tools
         uses: ./.github/actions/setup-rust
 
-      - name: Generate pollux report
+      - name: Generate pollux report (small)
+        if: ${{ github.ref != 'refs/heads/main' }}
         run: |
-          cargo run --bin pollux -- inquire --output html
+          RUST_LOG=info cargo run --bin pollux -- inquire --output html --coverage small
+          mkdir -p report && mv pollux-report.html report/index.html
+
+      - name: Generate pollux report (large)
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          RUST_LOG=info cargo run --bin pollux -- inquire --output html --coverage medium
           mkdir -p report && mv pollux-report.html report/index.html
 
       - name: Upload assets Github Pages assets

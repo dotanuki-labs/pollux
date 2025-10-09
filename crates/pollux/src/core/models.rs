@@ -84,6 +84,14 @@ pub enum InquireReportKind {
     Html,
 }
 
+#[derive(ValueEnum, Debug, Clone)]
+pub enum InquireCoverage {
+    Small,
+    Medium,
+    Large,
+    Huge,
+}
+
 pub type AnalysisOutcome = (CargoPackage, Option<CrateVeracityChecks>);
 
 pub struct StatisticsForPackages {

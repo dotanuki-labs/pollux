@@ -6,7 +6,7 @@ pub mod checker;
 pub mod cleaner;
 pub mod inquirer;
 
-use crate::core::models::{CargoPackage, CleanupScope, InquireReportKind};
+use crate::core::models::{CargoPackage, CleanupScope, InquireCoverage, InquireReportKind};
 use crate::infra::reporting::console::ConsoleReporter;
 use crate::infra::reporting::html::HtmlReporter;
 use crate::pollux::PolluxTask::*;
@@ -23,7 +23,7 @@ pub enum PolluxTask {
     CleanupAnalysedData,
     CleanupPackageSource,
     CleanupEverything,
-    InquirePopularCrates(InquireReportKind),
+    InquirePopularCrates(InquireReportKind, InquireCoverage),
 }
 
 pub struct Pollux {
@@ -62,7 +62,7 @@ impl Pollux {
             CleanupEverything => self.cleanup_everything(),
             CleanupPackageSource => self.cleanup_packages(),
             CleanupAnalysedData => self.cleanup_analysed_data(),
-            InquirePopularCrates(report_kind) => self.inquire_popular_crates(report_kind).await?,
+            InquirePopularCrates(report_kind, coverage) => self.inquire_popular_crates(report_kind, coverage).await?,
         }
 
         Ok(())
@@ -106,9 +106,13 @@ impl Pollux {
             .report_cleaning_finished(CleanupScope::PackageSources)
     }
 
-    async fn inquire_popular_crates(&self, report_kind: InquireReportKind) -> anyhow::Result<()> {
+    async fn inquire_popular_crates(
+        &self,
+        report_kind: InquireReportKind,
+        coverage: InquireCoverage,
+    ) -> anyhow::Result<()> {
         self.console_reporter.report_pollux_started();
-        let outcomes = self.inquirer.inquire_most_popular_crates().await?;
+        let outcomes = self.inquirer.inquire_most_popular_crates(coverage).await?;
 
         match report_kind {
             InquireReportKind::Console => self.console_reporter.report_ecosystem_inquired(&outcomes),
