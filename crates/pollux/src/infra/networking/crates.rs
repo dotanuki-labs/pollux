@@ -27,14 +27,14 @@ impl VeracityFactorCheck for OfficialCratesRegistryChecker {
             .get_crate_version_details(crate_info.name.as_str(), crate_info.version.as_str())
             .await?;
 
-        let Some(provenance) = crate_details.version.trustpub_data else {
-            log::info!("[pollux.checker] provenance not found for {}", crate_info);
+        let Some(trustpub_data) = crate_details.version.trustpub_data else {
+            log::info!("[pollux.checker] trusted publishing not found for {}", crate_info);
             return Ok(None);
         };
 
         let gha_run_url = format!(
             "https://github.com/{}/actions/runs/{}",
-            provenance.repository, provenance.run_id
+            trustpub_data.repository, trustpub_data.run_id
         );
 
         let attestation_url = Url::parse(gha_run_url.as_str())?;
@@ -89,7 +89,7 @@ mod tests {
 
     static SMALL_DELAY_FOR_RATE_LIMITING: u64 = 10;
 
-    fn responds_with_existing_provenance(crate_name: &str, crate_version: &str) -> impl FnOnce(When, Then) {
+    fn responds_with_existing_trusted_publishing(crate_name: &str, crate_version: &str) -> impl FnOnce(When, Then) {
         move |when, then| {
             let crate_version_template = r#"
                     {
@@ -120,7 +120,7 @@ mod tests {
         }
     }
 
-    fn responds_without_provenance(crate_name: &str, crate_version: &str) -> impl FnOnce(When, Then) {
+    fn responds_without_trusted_publishing(crate_name: &str, crate_version: &str) -> impl FnOnce(When, Then) {
         move |when, then| {
             let crate_version_template = r#"
                     {
@@ -158,7 +158,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn should_check_crate_provenance_when_available() {
+    async fn should_check_crate_trust_publishing_when_available() {
         let crate_name = "bon";
         let crate_version = "3.7.2";
         let crate_info = CargoPackage::with(crate_name, crate_version);
@@ -172,8 +172,8 @@ mod tests {
 
         let checker = OfficialCratesRegistryChecker::new(cratesio_client);
 
-        let with_provenance = responds_with_existing_provenance(crate_name, crate_version);
-        let mocked = mock_server.mock(with_provenance);
+        let with_trusted_publishing = responds_with_existing_trusted_publishing(crate_name, crate_version);
+        let mocked = mock_server.mock(with_trusted_publishing);
 
         let check = checker
             .execute(&crate_info)
@@ -186,7 +186,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn should_check_crate_provenance_when_not_available() {
+    async fn should_check_crate_trusted_publishing_when_not_available() {
         let crate_name = "canopus";
         let crate_version = "0.1.1";
         let crate_info = CargoPackage::with(crate_name, crate_version);
@@ -199,9 +199,9 @@ mod tests {
         );
         let checker = OfficialCratesRegistryChecker::new(cratesio_client);
 
-        let without_provenance = responds_without_provenance(crate_name, crate_version);
+        let without_trusted_publishing = responds_without_trusted_publishing(crate_name, crate_version);
 
-        let mocked = mock_server.mock(without_provenance);
+        let mocked = mock_server.mock(without_trusted_publishing);
 
         let check = checker.execute(&crate_info).await.unwrap();
 
@@ -210,7 +210,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn should_check_provenance_when_server_not_available() {
+    async fn should_check_trusted_publishing_when_server_not_available() {
         let crate_name = "canopus";
         let crate_version = "0.0.1";
         let crate_info = CargoPackage::with(crate_name, crate_version);

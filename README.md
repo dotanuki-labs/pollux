@@ -1,6 +1,6 @@
 # pollux
 
-> Get provenance and build reproducibility insights for your Rust supply chain 🦀
+> Get trusted publishing and build reproducibility insights for any Rust supply chain 🦀
 
 ## What
 

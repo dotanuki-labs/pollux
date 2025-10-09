@@ -52,7 +52,7 @@ fn should_analyse_project_from_path() {
         .success()
         .stdout(contains("total packages analysed : 3"))
         .stdout(contains("pkg:cargo/arbitrary@1.4.1 (none)"))
-        .stdout(contains("pkg:cargo/find-msvc-tools@0.1.1 (provenance attested)"))
+        .stdout(contains("pkg:cargo/find-msvc-tools@0.1.1 (trusted publishing)"))
         .stdout(contains("pkg:cargo/levenshtein@1.0.5 (reproducible builds)"));
 }
 
@@ -73,7 +73,7 @@ fn should_check_standalone_package_purl() {
         .assert()
         .success()
         .stdout(contains(
-            "provenance evidence : https://github.com/elastio/bon/actions/runs/17402178810",
+            "trusted publishing evidence : https://github.com/elastio/bon/actions/runs/17402178810",
         ))
         .stdout(contains("reproducibility evidence : not found"));
 }

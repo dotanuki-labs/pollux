@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 use crate::core::analysers::combined::VeracityChecksAnalyser;
-use crate::core::analysers::standalone::{BuildReproducibilityChecker, CachedDataChecker, CrateProvenanceChecker};
+use crate::core::analysers::standalone::{
+    BuildReproducibilityChecker, CachedDataChecker, CrateTrustedPublishingChecker,
+};
 use crate::infra::caching::CacheManager;
 use crate::infra::caching::analysis::AnalysedPackagesCache;
 use crate::infra::networking::crates::registry::CratesDotIOClient;
@@ -35,9 +37,9 @@ fn cached_checker() -> CachedDataChecker {
     CachedDataChecker::FileSystem(delegate)
 }
 
-fn provenance_checker() -> CrateProvenanceChecker {
+fn trusted_publishing_checker() -> CrateTrustedPublishingChecker {
     let delegate = OfficialCratesRegistryChecker::new(cratesio_client());
-    CrateProvenanceChecker::CratesOfficialRegistry(delegate)
+    CrateTrustedPublishingChecker::CratesOfficialRegistry(delegate)
 }
 
 fn reproducibility_checker() -> BuildReproducibilityChecker {
@@ -46,7 +48,11 @@ fn reproducibility_checker() -> BuildReproducibilityChecker {
 }
 
 fn veracity_analyser() -> VeracityChecksAnalyser {
-    VeracityChecksAnalyser::new(cached_checker(), provenance_checker(), reproducibility_checker())
+    VeracityChecksAnalyser::new(
+        cached_checker(),
+        trusted_publishing_checker(),
+        reproducibility_checker(),
+    )
 }
 
 fn dependencies_resolver() -> DependenciesResolver {

@@ -1,34 +1,36 @@
 // Copyright 2025 Dotanuki Labs
 // SPDX-License-Identifier: MIT
 
-use crate::core::analysers::standalone::{BuildReproducibilityChecker, CachedDataChecker, CrateProvenanceChecker};
+use crate::core::analysers::standalone::{
+    BuildReproducibilityChecker, CachedDataChecker, CrateTrustedPublishingChecker,
+};
 use crate::core::interfaces::{AnalyzedDataStorage, CrateVeracityAnalysis, VeracityFactorCheck};
 use crate::core::models::{CargoPackage, CrateVeracityChecks};
 
 pub struct VeracityChecksAnalyser {
     cache: CachedDataChecker,
-    provenance: CrateProvenanceChecker,
+    trusted_publishing: CrateTrustedPublishingChecker,
     reproducibility: BuildReproducibilityChecker,
 }
 
 impl VeracityChecksAnalyser {
     pub fn new(
         cache: CachedDataChecker,
-        provenance: CrateProvenanceChecker,
+        trusted_publishing: CrateTrustedPublishingChecker,
         reproducibility: BuildReproducibilityChecker,
     ) -> Self {
         Self {
             cache,
-            provenance,
+            trusted_publishing,
             reproducibility,
         }
     }
 
     async fn analyse(&self, crate_info: &CargoPackage) -> anyhow::Result<CrateVeracityChecks> {
         let reproducible_build_evidence = self.reproducibility.execute(crate_info).await?;
-        let provenance_evidence = self.provenance.execute(crate_info).await?;
+        let trusted_publishing_evidence = self.trusted_publishing.execute(crate_info).await?;
 
-        let checks = CrateVeracityChecks::new(provenance_evidence, reproducible_build_evidence);
+        let checks = CrateVeracityChecks::new(trusted_publishing_evidence, reproducible_build_evidence);
         self.cache.save(crate_info, checks.clone())?;
         Ok(checks)
     }
@@ -51,7 +53,8 @@ impl CrateVeracityAnalysis for VeracityChecksAnalyser {
             Some(existing) => Some(existing.clone()),
         };
 
-        let updated_checks = CrateVeracityChecks::new(cached_checks.provenance_evidence, updated_reproducibility);
+        let updated_checks =
+            CrateVeracityChecks::new(cached_checks.trusted_publishing_evidence, updated_reproducibility);
 
         Ok(updated_checks)
     }
@@ -61,7 +64,7 @@ impl CrateVeracityAnalysis for VeracityChecksAnalyser {
 mod tests {
     use crate::core::analysers::combined::VeracityChecksAnalyser;
     use crate::core::analysers::standalone::{
-        BuildReproducibilityChecker, CachedDataChecker, CrateProvenanceChecker, FakeVeracityChecker,
+        BuildReproducibilityChecker, CachedDataChecker, CrateTrustedPublishingChecker, FakeVeracityChecker,
     };
     use crate::core::interfaces::CrateVeracityAnalysis;
     use crate::core::models::{CargoPackage, CrateVeracityChecks};
@@ -73,7 +76,7 @@ mod tests {
     struct CrateScenario {
         name: &'static str,
         version: &'static str,
-        provenance_evidence: Option<&'static str>,
+        trusted_publishing_evidence: Option<&'static str>,
         reproducibility_evidence: Option<&'static str>,
         serving_from_cache: bool,
     }
@@ -89,7 +92,7 @@ mod tests {
         if scenario.serving_from_cache {
             let cache_key = CargoPackage::with(scenario.name, scenario.version).to_string();
             let checks = CrateVeracityChecks::new(
-                convert_to_url(scenario.provenance_evidence),
+                convert_to_url(scenario.trusted_publishing_evidence),
                 convert_to_url(scenario.reproducibility_evidence),
             );
             HashMap::from([(cache_key, checks)])
@@ -98,13 +101,13 @@ mod tests {
         }
     }
 
-    fn fake_provenance_checker(scenario: &CrateScenario) -> FakeVeracityChecker {
-        if scenario.provenance_evidence.is_some() {
+    fn fake_trusted_publishing_checker(scenario: &CrateScenario) -> FakeVeracityChecker {
+        if scenario.trusted_publishing_evidence.is_some() {
             let package = CargoPackage::with(scenario.name, scenario.version);
 
             FakeVeracityChecker(HashMap::from([(
                 package,
-                scenario.provenance_evidence.unwrap().to_string(),
+                scenario.trusted_publishing_evidence.unwrap().to_string(),
             )]))
         } else {
             FakeVeracityChecker(HashMap::new())
@@ -126,7 +129,7 @@ mod tests {
     fn crate_analyser(scenario: &CrateScenario) -> VeracityChecksAnalyser {
         VeracityChecksAnalyser::new(
             CachedDataChecker::FakeCache(fake_results_storage(scenario)),
-            CrateProvenanceChecker::FakeRegistry(fake_provenance_checker(scenario)),
+            CrateTrustedPublishingChecker::FakeRegistry(fake_trusted_publishing_checker(scenario)),
             BuildReproducibilityChecker::FakeRebuilder(fake_reproducibility_checker(scenario)),
         )
     }
@@ -135,13 +138,13 @@ mod tests {
     async fn should_run_online_analysis_and_get_two_veracity_checks() {
         let crate_name = "fake-crate";
         let crate_version = "1.2.3";
-        let provenance_url = "https://shortn.ed/actions/runs/12345789";
+        let gha_run_url = "https://shortn.ed/actions/runs/12345789";
         let ossrebuild_url = "https://shortn.ed/fake-crate-1.2.3.crate/rebuild.intoto.jsonl";
 
         let scenario = CrateScenario {
             name: crate_name,
             version: crate_version,
-            provenance_evidence: Some(provenance_url),
+            trusted_publishing_evidence: Some(gha_run_url),
             reproducibility_evidence: Some(ossrebuild_url),
             serving_from_cache: false,
         };
@@ -152,7 +155,7 @@ mod tests {
 
         let analysed = analyser.execute(&cargo_package).await.unwrap();
 
-        let expected = CrateVeracityChecks::new(Url::from_str(provenance_url).ok(), Url::from_str(ossrebuild_url).ok());
+        let expected = CrateVeracityChecks::new(Url::from_str(gha_run_url).ok(), Url::from_str(ossrebuild_url).ok());
 
         assertor::assert_that!(analysed).is_equal_to(expected);
     }
@@ -166,7 +169,7 @@ mod tests {
         let scenario = CrateScenario {
             name: crate_name,
             version: crate_version,
-            provenance_evidence: None,
+            trusted_publishing_evidence: None,
             reproducibility_evidence: Some(ossrebuild_url),
             serving_from_cache: false,
         };
@@ -186,12 +189,12 @@ mod tests {
     async fn should_run_get_veracity_checks_from_cache() {
         let crate_name = "fake-crate";
         let crate_version = "1.2.3";
-        let provenance_url = "https://shortn.ed/actions/runs/12345789";
+        let gha_run_url = "https://shortn.ed/actions/runs/12345789";
 
         let scenario = CrateScenario {
             name: crate_name,
             version: crate_version,
-            provenance_evidence: Some(provenance_url),
+            trusted_publishing_evidence: Some(gha_run_url),
             reproducibility_evidence: None,
             serving_from_cache: true,
         };
@@ -202,7 +205,7 @@ mod tests {
 
         let analysed = analyser.execute(&cargo_package).await.unwrap();
 
-        let expected = CrateVeracityChecks::new(Url::from_str(provenance_url).ok(), None);
+        let expected = CrateVeracityChecks::new(Url::from_str(gha_run_url).ok(), None);
 
         assertor::assert_that!(analysed).is_equal_to(expected);
     }
