@@ -26,7 +26,7 @@ jobs:
 
       - name: Generate pollux report
         run: |
-          cargo run --bin pollux -- inquire --output html
+          RUST_LOG=info cargo run --bin pollux -- inquire --output html --coverage large
           mkdir -p report && mv pollux-report.html report/index.html
 
       - name: Upload assets Github Pages assets

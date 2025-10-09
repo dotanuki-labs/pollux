@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::core::interfaces::VeracityFactorCheck;
-use crate::core::models::CargoPackage;
+use crate::core::models::{CargoPackage, InquireCoverage};
 use crate::infra::networking::crates::registry::CratesDotIOClient;
 use url::Url;
 
@@ -51,9 +51,13 @@ impl PopularCratesFetcher {
         Self { cratesio_client }
     }
 
-    pub async fn get_most_popular_crates(&self) -> anyhow::Result<Vec<CargoPackage>> {
-        let pages_to_query = 2;
-        let per_page = 50;
+    pub async fn get_most_popular_crates(&self, coverage: InquireCoverage) -> anyhow::Result<Vec<CargoPackage>> {
+        let (pages_to_query, per_page) = match coverage {
+            InquireCoverage::Small => (1, 50),   // 50
+            InquireCoverage::Medium => (10, 50), // 500
+            InquireCoverage::Large => (10, 100), // 1000
+            InquireCoverage::Huge => (50, 100),  // 5000
+        };
 
         let mut results = vec![];
 
