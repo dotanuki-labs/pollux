@@ -24,19 +24,19 @@ impl HtmlReporter {
         Self { output_folder }
     }
 
-    pub fn report_ecosystem_inquired(&self, results: &EcosystemInquiringResults) {
+    pub fn report_ecosystem_inquired(&self, results: &EcosystemInquiringResults) -> anyhow::Result<()> {
         let report_file = self.output_folder.join("pollux-report.html");
         let mut env = Environment::new();
-        env.add_template("pollux-report", TEMPLATE)
-            .expect("failed to add template");
+        env.add_template("pollux-report", TEMPLATE)?;
+        let template = env.get_template("pollux-report")?;
 
-        let template = env.get_template("pollux-report").unwrap();
-
-        let rendered = template.render(results).expect("failed to render results");
-        fs::write(report_file.clone(), rendered).unwrap();
+        let rendered = template.render(results)?;
+        fs::write(report_file.clone(), rendered)?;
 
         println!();
-        println!("Report available at : {} ", report_file.to_str().unwrap());
+        println!("Report available at : {:?} ", report_file);
         println!();
+
+        Ok(())
     }
 }
