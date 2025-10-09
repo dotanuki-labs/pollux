@@ -8,7 +8,7 @@ on:
 
 jobs:
   checks:
-    runs-on: warp-ubuntu-2404-x64-2x # ubuntu-24.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Project checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0

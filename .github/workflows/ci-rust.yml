@@ -11,7 +11,7 @@ on:
 
 jobs:
   lint:
-    runs-on: warp-ubuntu-2404-x64-2x # ubuntu-24.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Project checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -25,7 +25,7 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
 
   tests:
-    runs-on: warp-ubuntu-2404-x64-4x # ubuntu-24.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Project checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -40,7 +40,7 @@ jobs:
 
   security:
     needs: [lint, tests]
-    runs-on: warp-ubuntu-2404-x64-8x
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Project checkout
@@ -56,7 +56,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ warp-ubuntu-2404-x64-4x, warp-macos-15-arm64-6x ] # os: [ ubuntu-24.04, macos-15 ]
+        os: [ ubuntu-24.04, macos-15 ]
 
     steps:
       - name: Project checkout
@@ -80,7 +80,7 @@ jobs:
 
   extras:
     needs: build
-    runs-on: warp-ubuntu-2404-x64-4x
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Project checkout
@@ -114,7 +114,7 @@ jobs:
 
   publish:
     needs: build
-    runs-on: warp-ubuntu-2404-x64-4x
+    runs-on: ubuntu-24.04
     services:
       local-registry:
         image: ghcr.io/kellnr/kellnr:5@sha256:2a58332b562df3fab776a5cd56bf6a20dbdcc7bd0553090283012abb4bd9aed0
