@@ -47,14 +47,14 @@ impl Display for CargoPackage {
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq, Serialize)]
 pub struct CrateVeracityChecks {
-    pub provenance_evidence: Option<Url>,
+    pub trusted_publishing_evidence: Option<Url>,
     pub reproducibility_evidence: Option<Url>,
 }
 
 impl CrateVeracityChecks {
-    pub fn new(provenance_evidence: Option<Url>, reproducibility_evidence: Option<Url>) -> Self {
+    pub fn new(trusted_publishing_evidence: Option<Url>, reproducibility_evidence: Option<Url>) -> Self {
         Self {
-            provenance_evidence,
+            trusted_publishing_evidence,
             reproducibility_evidence,
         }
     }
@@ -62,9 +62,9 @@ impl CrateVeracityChecks {
 
 impl Display for CrateVeracityChecks {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match (&self.provenance_evidence, &self.reproducibility_evidence) {
-            (Some(_), Some(_)) => f.write_str("provenance attested; reproducible builds"),
-            (Some(_), None) => f.write_str("provenance attested"),
+        match (&self.trusted_publishing_evidence, &self.reproducibility_evidence) {
+            (Some(_), Some(_)) => f.write_str("trusted publishing; reproducible builds"),
+            (Some(_), None) => f.write_str("trusted publishing"),
             (None, Some(_)) => f.write_str("reproducible builds"),
             (None, None) => f.write_str("none"),
         }
@@ -88,7 +88,7 @@ pub type AnalysisOutcome = (CargoPackage, Option<CrateVeracityChecks>);
 
 pub struct StatisticsForPackages {
     pub total: usize,
-    pub provenance_attested: usize,
+    pub trusted_publishing: usize,
     pub reproducible_builds: usize,
 }
 
@@ -106,9 +106,9 @@ pub struct InquiringOutcome {
 #[derive(Serialize, Debug)]
 pub struct EcosystemInquiringResults {
     pub total_crates_inquired: u32,
-    pub total_crates_with_provenance: u32,
+    pub total_crates_with_trusted_publishing: u32,
     pub total_crates_with_reproducibility: u32,
-    pub presence_of_provenance: String,
+    pub presence_of_trusted_publishing: String,
     pub presence_of_reproducibility: String,
     pub outcomes: Vec<InquiringOutcome>,
 }

@@ -7,7 +7,7 @@
     <title>Measuring trust for the top {{ total_crates_inquired }} Rust crates - pollux report</title>
     <meta
         name="description"
-        content="Build reproducibility and provenance attestation checks for top {{ total_crates_inquired }} Rust crates."
+        content="Build reproducibility and trusted publishing attestation checks for top {{ total_crates_inquired }} Rust crates."
     />
 
     <link
@@ -45,7 +45,7 @@
         </p>
 
         <ul>
-            <li>{{ total_crates_with_provenance }} out of {{ total_crates_inquired }} adopt <a href="https://crates.io/docs/trusted-publishing">trusted publishing</a> (~ {{ presence_of_provenance }}%)</li>
+            <li>{{ total_crates_with_trusted_publishing }} out of {{ total_crates_inquired }} adopt <a href="https://crates.io/docs/trusted-publishing">trusted publishing</a> (~ {{ presence_of_trusted_publishing }}%)</li>
             <li>{{ total_crates_with_reproducibility }} out of {{ total_crates_inquired }} have builds reproduced by <a href="https://oss-rebuild.dev">oss-rebuild</a> (~ {{ presence_of_reproducibility }}%)</li>
         </ul>
 
@@ -73,7 +73,7 @@
                         <th scope="row">{{- loop.index }}</th>
                         <td><a href="https://crates.io/crates/{{ outcome.cargo_package.name }}">{{ outcome.cargo_package.name }}</a></td>
                         <td>{{ outcome.cargo_package.version[0:15] }}</td>
-                        {% if outcome.checks.provenance_evidence %}<td><a href="{{ outcome.checks.provenance_evidence }}">yes</a></td>{% else %}<td>no</td>{% endif %}
+                        {% if outcome.checks.trusted_publishing_evidence %}<td><a href="{{ outcome.checks.trusted_publishing_evidence }}">yes</a></td>{% else %}<td>no</td>{% endif %}
                         {% if outcome.checks.reproducibility_evidence %}<td><a href="{{ outcome.checks.reproducibility_evidence }}">yes</a></td>{% else %}<td>no</td>{% endif %}
                     </tr>
                     {%- endfor %}

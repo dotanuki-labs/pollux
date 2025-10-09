@@ -83,20 +83,23 @@ impl Actor for PolluxAnalyser {
                 log::info!("[pollux.actor] computing aggregated results for processed packages");
 
                 let mut total_analysed_packages = 0;
-                let mut with_provenance = 0;
+                let mut with_trusted_publishing = 0;
                 let mut with_reproducible_builds = 0;
 
                 for (package, checks) in outcomes.iter() {
                     total_analysed_packages += 1;
 
                     if let Some(existing) = checks {
-                        match (&existing.provenance_evidence, &existing.reproducibility_evidence) {
+                        match (
+                            &existing.trusted_publishing_evidence,
+                            &existing.reproducibility_evidence,
+                        ) {
                             (Some(_), Some(_)) => {
                                 with_reproducible_builds += 1;
-                                with_provenance += 1
+                                with_trusted_publishing += 1
                             },
 
-                            (Some(_), None) => with_provenance += 1,
+                            (Some(_), None) => with_trusted_publishing += 1,
 
                             (None, Some(_)) => with_reproducible_builds += 1,
                             (None, None) => {
@@ -108,7 +111,7 @@ impl Actor for PolluxAnalyser {
 
                 let statistics = StatisticsForPackages {
                     total: total_analysed_packages,
-                    provenance_attested: with_provenance,
+                    trusted_publishing: with_trusted_publishing,
                     reproducible_builds: with_reproducible_builds,
                 };
 

@@ -29,8 +29,8 @@ impl ConsoleReporter {
         println!();
         println!("• total packages analysed : {}", self.cyan(statistics.total));
         println!(
-            "• with provenance attested : {}",
-            self.cyan(statistics.provenance_attested)
+            "• with trusted publishing attested : {}",
+            self.cyan(statistics.trusted_publishing)
         );
         println!(
             "• with reproducible builds : {}",
@@ -63,10 +63,10 @@ impl ConsoleReporter {
     pub fn report_checker_outcomes(&self, check: CrateVeracityChecks) {
         println!();
 
-        if let Some(cratesio_link) = check.provenance_evidence {
-            println!("• provenance evidence : {}", self.cyan(cratesio_link));
+        if let Some(cratesio_link) = check.trusted_publishing_evidence {
+            println!("• trusted publishing evidence : {}", self.cyan(cratesio_link));
         } else {
-            println!("• provenance evidence : {}", self.cyan("not found"));
+            println!("• trusted publishing evidence : {}", self.cyan("not found"));
         }
 
         if let Some(oss_rebuild_link) = check.reproducibility_evidence {
@@ -96,8 +96,8 @@ impl ConsoleReporter {
         println!();
         println!("• total packages analysed : {}", self.cyan(results.outcomes.len()));
         println!(
-            "• with provenance attested : {} %",
-            self.cyan(&results.presence_of_provenance)
+            "• with trusted publishing attested : {} %",
+            self.cyan(&results.presence_of_trusted_publishing)
         );
         println!(
             "• with reproducible builds : {} %",
@@ -108,12 +108,17 @@ impl ConsoleReporter {
         println!();
 
         let mut table = Table::new();
-        table.set_header(vec!["Crate name", "Checked versions", "Provenance", "Reproducibility"]);
+        table.set_header(vec![
+            "Crate name",
+            "Checked versions",
+            "Trusted Publishing",
+            "Reproducibility",
+        ]);
         results.outcomes.iter().for_each(|outcome| {
             let row = vec![
                 outcome.cargo_package.name.as_str(),
                 outcome.cargo_package.version.as_str(),
-                match outcome.checks.provenance_evidence {
+                match outcome.checks.trusted_publishing_evidence {
                     None => "no",
                     Some(_) => "yes",
                 },

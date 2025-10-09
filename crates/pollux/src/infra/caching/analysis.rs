@@ -14,7 +14,7 @@ static VERACITY_CHECKS_FILE_NAME: &str = "checks.json";
 #[derive(Debug, Serialize, Deserialize)]
 struct CachedVeracityInfo {
     crate_purl: String,
-    provenance: Option<String>,
+    trusted_publishing: Option<String>,
     reproducibility: Option<String>,
 }
 
@@ -49,7 +49,7 @@ impl AnalyzedDataStorage for AnalysedPackagesCache {
         let serialized = std::fs::read(cache_file)?;
         let info: CachedVeracityInfo = serde_json::from_slice(&serialized)?;
         let checks = CrateVeracityChecks::new(
-            info.provenance
+            info.trusted_publishing
                 .map(|url| Url::from_str(&url).expect("cannot parse cache url")),
             info.reproducibility
                 .map(|url| Url::from_str(&url).expect("cannot parse cache url")),
@@ -68,7 +68,7 @@ impl AnalyzedDataStorage for AnalysedPackagesCache {
 
         let cached_veracity = CachedVeracityInfo {
             crate_purl: crate_info.to_string(),
-            provenance: checks.provenance_evidence.map(|url| url.to_string()),
+            trusted_publishing: checks.trusted_publishing_evidence.map(|url| url.to_string()),
             reproducibility: checks.reproducibility_evidence.map(|url| url.to_string()),
         };
 

@@ -8,18 +8,18 @@ use crate::infra::networking::crates::OfficialCratesRegistryChecker;
 use crate::infra::networking::ossrebuild::OssRebuildChecker;
 use url::Url;
 
-pub enum CrateProvenanceChecker {
+pub enum CrateTrustedPublishingChecker {
     CratesOfficialRegistry(OfficialCratesRegistryChecker),
     #[cfg(test)]
     FakeRegistry(FakeVeracityChecker),
 }
 
-impl VeracityFactorCheck for CrateProvenanceChecker {
+impl VeracityFactorCheck for CrateTrustedPublishingChecker {
     async fn execute(&self, crate_info: &CargoPackage) -> anyhow::Result<Option<Url>> {
         match self {
-            CrateProvenanceChecker::CratesOfficialRegistry(delegate) => delegate.execute(crate_info).await,
+            CrateTrustedPublishingChecker::CratesOfficialRegistry(delegate) => delegate.execute(crate_info).await,
             #[cfg(test)]
-            CrateProvenanceChecker::FakeRegistry(fake) => fake.execute(crate_info).await,
+            CrateTrustedPublishingChecker::FakeRegistry(fake) => fake.execute(crate_info).await,
         }
     }
 }

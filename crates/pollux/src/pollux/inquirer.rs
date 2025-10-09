@@ -23,19 +23,19 @@ impl PolluxInquirer {
         let popular_packages = self.popular_crates_fetcher.get_most_popular_crates().await?;
 
         let mut inquired_packages = vec![];
-        let mut with_provenance = 0;
+        let mut with_trusted_publishing = 0;
         let mut with_reproducibility = 0;
 
         for cargo_package in popular_packages {
             let checks = self.veracity_analyser.execute(&cargo_package).await?;
 
-            match (&checks.provenance_evidence, &checks.reproducibility_evidence) {
+            match (&checks.trusted_publishing_evidence, &checks.reproducibility_evidence) {
                 (Some(_), Some(_)) => {
-                    with_provenance += 1;
+                    with_trusted_publishing += 1;
                     with_reproducibility += 1;
                 },
                 (Some(_), None) => {
-                    with_provenance += 1;
+                    with_trusted_publishing += 1;
                 },
                 (None, Some(_)) => {
                     with_reproducibility += 1;
@@ -53,9 +53,9 @@ impl PolluxInquirer {
 
         let results = EcosystemInquiringResults {
             total_crates_inquired: total_packages,
-            total_crates_with_provenance: with_provenance,
+            total_crates_with_trusted_publishing: with_trusted_publishing,
             total_crates_with_reproducibility: with_reproducibility,
-            presence_of_provenance: format!("{}", 100 * with_provenance / total_packages),
+            presence_of_trusted_publishing: format!("{}", 100 * with_trusted_publishing / total_packages),
             presence_of_reproducibility: format!("{}", 100 * with_reproducibility / total_packages),
             outcomes: inquired_packages,
         };
