@@ -112,7 +112,7 @@ impl Pollux {
 
         match report_kind {
             InquireReportKind::Console => self.console_reporter.report_ecosystem_inquired(&outcomes),
-            InquireReportKind::Html => self.html_reporter.report_ecosystem_inquired(&outcomes),
+            InquireReportKind::Html => self.html_reporter.report_ecosystem_inquired(&outcomes)?,
         }
 
         Ok(())
