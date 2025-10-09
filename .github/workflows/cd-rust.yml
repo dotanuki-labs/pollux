@@ -16,7 +16,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ warp-ubuntu-2404-x64-4x, warp-macos-15-arm64-6x ] # os: [ ubuntu-24.04, macos-15 ]
+        os: [ ubuntu-24.04, macos-15 ]
 
     steps:
       - name: Project Checkout
@@ -40,7 +40,7 @@ jobs:
 
   extras:
     needs: build
-    runs-on: warp-ubuntu-2404-x64-4x
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Project Checkout
@@ -74,7 +74,7 @@ jobs:
 
   github:
     needs: extras
-    runs-on: warp-ubuntu-2404-x64-4x
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Project Checkout
@@ -116,7 +116,7 @@ jobs:
 
   cratesio:
     needs: github
-    runs-on: warp-ubuntu-2404-x64-4x
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Project Checkout

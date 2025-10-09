@@ -8,7 +8,7 @@ on:
 
 jobs:
   deploy-pages:
-    runs-on: warp-ubuntu-2404-x64-2x # ubuntu-24.04
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
