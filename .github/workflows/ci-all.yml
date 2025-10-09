@@ -20,7 +20,7 @@ jobs:
     uses: ./.github/workflows/ci-docs.yml
     permissions:
       contents: read
-      pages: read
+      pages: write
       id-token: write
 
   docker:

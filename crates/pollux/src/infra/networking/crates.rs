@@ -52,8 +52,8 @@ impl PopularCratesFetcher {
     }
 
     pub async fn get_most_popular_crates(&self) -> anyhow::Result<Vec<CargoPackage>> {
-        let pages_to_query = 10;
-        let per_page = 100;
+        let pages_to_query = 2;
+        let per_page = 50;
 
         let mut results = vec![];
 
