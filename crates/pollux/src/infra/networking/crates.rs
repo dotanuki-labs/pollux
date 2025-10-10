@@ -53,7 +53,7 @@ impl PopularCratesFetcher {
 
     pub async fn get_most_popular_crates(&self, coverage: InquireCoverage) -> anyhow::Result<Vec<CargoPackage>> {
         let (pages_to_query, per_page) = match coverage {
-            InquireCoverage::Small => (1, 50),   // 50
+            InquireCoverage::Small => (2, 50),   // 100
             InquireCoverage::Medium => (10, 50), // 500
             InquireCoverage::Large => (10, 100), // 1000
             InquireCoverage::Huge => (50, 100),  // 5000
