@@ -24,7 +24,7 @@ jobs:
         uses: crate-ci/committed@15229711f8f597474c0b636f327cde5969f9a529 # v1.1.7
 
       - name: Check MIT license on source files
-        uses: dotanuki-labs/github-actions/foss/check-licenses@3ec738285d4743905ec3e2b44e58f2e0901cb945
+        uses: dotanuki-labs/github-actions/foss/check-licenses@02a32cd43679b1d87d690ca6dd15eda5a4087a19
         with:
           file-patterns: "*.rs,*.yml"
           license: "mit"
