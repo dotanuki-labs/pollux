@@ -22,7 +22,7 @@ jobs:
           path: /home/runner/.pollux
 
       - name: Lint Markdown files
-        uses: dotanuki-labs/github-actions/quality/markdown@02a32cd43679b1d87d690ca6dd15eda5a4087a19
+        uses: dotanuki-labs/github-actions/quality/markdown@73651dc53c2f4bbca0a76f0d1ebbb0720883fb8d
 
       - name: Configure Github Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
