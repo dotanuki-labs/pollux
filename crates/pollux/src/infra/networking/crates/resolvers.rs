@@ -4,8 +4,8 @@
 use crate::core::models::CargoPackage;
 use crate::infra::networking::crates::tarballs::CrateArchiveDownloader;
 use anyhow::bail;
+use camino::Utf8PathBuf;
 use cargo_lock::Lockfile;
-use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub struct DependenciesResolver {
@@ -17,8 +17,8 @@ impl DependenciesResolver {
         Self { crate_downloader }
     }
 
-    pub async fn resolve_for_local_project(&self, project_path: &Path) -> anyhow::Result<Vec<CargoPackage>> {
-        let local_resolver = LocalProjectDependenciesResolver::new(project_path.to_path_buf());
+    pub async fn resolve_for_local_project(&self, project_path: Utf8PathBuf) -> anyhow::Result<Vec<CargoPackage>> {
+        let local_resolver = LocalProjectDependenciesResolver::new(project_path);
         local_resolver.resolve().await
     }
 
@@ -30,11 +30,11 @@ impl DependenciesResolver {
 }
 
 struct LocalProjectDependenciesResolver {
-    project_root: PathBuf,
+    project_root: Utf8PathBuf,
 }
 
 impl LocalProjectDependenciesResolver {
-    pub fn new(project_root: PathBuf) -> Self {
+    pub fn new(project_root: Utf8PathBuf) -> Self {
         Self { project_root }
     }
 
@@ -57,7 +57,7 @@ impl LocalProjectDependenciesResolver {
         Ok(crates)
     }
 
-    fn locate_or_generate(&self) -> anyhow::Result<PathBuf> {
+    fn locate_or_generate(&self) -> anyhow::Result<Utf8PathBuf> {
         if !self.project_root.join("Cargo.lock").exists() {
             match self.generate_lockfile() {
                 Ok(_) => {
@@ -105,6 +105,7 @@ mod tests {
     use crate::core::models::CargoPackage;
     use crate::infra::networking::crates::resolvers::LocalProjectDependenciesResolver;
     use assertor::EqualityAssertion;
+    use camino::Utf8PathBuf;
     use std::fs;
     use temp_dir::TempDir;
 
@@ -156,7 +157,7 @@ mod tests {
         fs::write(&lockfile_path, lockfile_contents).expect("failed to cargo manifest file");
 
         let resolver = LocalProjectDependenciesResolver {
-            project_root: cargo_project.path().to_path_buf(),
+            project_root: Utf8PathBuf::try_from(cargo_project.path().to_path_buf()).unwrap(),
         };
 
         let dependencies = resolver.resolve().await.expect("resolve_dependencies failed");

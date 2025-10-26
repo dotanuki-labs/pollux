@@ -5,9 +5,9 @@ use crate::core::models::CargoPackage;
 use crate::infra::caching::CacheManager;
 use crate::infra::networking::crates::registry::CratesDotIOClient;
 use anyhow::Context;
+use camino::Utf8PathBuf;
 use decompress::{Decompressor, ExtractOptsBuilder, decompressors};
 use std::fs;
-use std::path::PathBuf;
 
 pub struct CrateArchiveDownloader {
     cratesio_client: CratesDotIOClient,
@@ -22,7 +22,7 @@ impl CrateArchiveDownloader {
         }
     }
 
-    pub async fn download_extract(&self, target_package: &CargoPackage) -> anyhow::Result<PathBuf> {
+    pub async fn download_extract(&self, target_package: &CargoPackage) -> anyhow::Result<Utf8PathBuf> {
         log::info!("[pollux.cargo] downloading package : {}", target_package.name);
 
         let downloaded = self
@@ -64,6 +64,7 @@ impl CrateArchiveDownloader {
         fs::remove_file(tarball_path).context("failed to remove tarball")?;
 
         log::info!("[pollux.cargo] downloaded and extracted files for {}", &target_package);
+        let output_dir = Utf8PathBuf::try_from(output_dir).context("cannot get an utf-8 path")?;
         Ok(output_dir)
     }
 }

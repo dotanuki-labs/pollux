@@ -12,6 +12,7 @@ use crate::infra::reporting::html::HtmlReporter;
 use crate::pollux::PolluxTask::*;
 use crate::pollux::inquirer::PolluxInquirer;
 use analyser::PolluxAnalyser;
+use camino::Utf8PathBuf;
 use checker::PolluxChecker;
 use cleaner::PolluxCleaner;
 use std::path::PathBuf;
@@ -77,7 +78,8 @@ impl Pollux {
 
     async fn analyse_rust_project(self, project_root: PathBuf) -> anyhow::Result<()> {
         self.console_reporter.report_pollux_started();
-        let results = self.analyser.analyse_project(project_root.as_path()).await?;
+        let project_root = Utf8PathBuf::try_from(project_root.to_path_buf())?;
+        let results = self.analyser.analyse_project(project_root).await?;
         self.console_reporter.report_analyser_outcomes(&results);
         Ok(())
     }

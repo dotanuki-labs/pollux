@@ -6,8 +6,8 @@ use crate::core::interfaces::CrateVeracityAnalysis;
 use crate::core::models::{AnalysisOutcome, AnalysisResults, CargoPackage, StatisticsForPackages};
 use crate::infra::networking::crates::resolvers::DependenciesResolver;
 use crate::ioc::MILLIS_TO_WAIT_AFTER_RATE_LIMITED;
+use camino::Utf8PathBuf;
 use ractor::{Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
-use std::path::Path;
 
 pub enum AnalyserMessage {
     AnalysePackage(CargoPackage),
@@ -27,7 +27,7 @@ impl PolluxAnalyser {
         }
     }
 
-    pub async fn analyse_project(self, project_path: &Path) -> anyhow::Result<AnalysisResults> {
+    pub async fn analyse_project(self, project_path: Utf8PathBuf) -> anyhow::Result<AnalysisResults> {
         let cargo_packages = self
             .dependencies_resolver
             .resolve_for_local_project(project_path)
