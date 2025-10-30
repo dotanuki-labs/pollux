@@ -9,7 +9,7 @@ use std::fs;
 use temp_dir::TempDir;
 
 fn sut() -> Command {
-    Command::cargo_bin("pollux").expect("Should be able to create a command")
+    assert_cmd::cargo::cargo_bin_cmd!("pollux")
 }
 
 #[test]
