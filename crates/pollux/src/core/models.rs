@@ -40,7 +40,7 @@ impl CargoPackage {
 }
 
 impl Display for CargoPackage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("pkg:cargo/{}@{}", self.name, self.version))
     }
 }

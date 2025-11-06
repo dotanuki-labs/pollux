@@ -40,7 +40,7 @@ impl VeracityFactorCheck for OssRebuildChecker {
 
         if response.status() == StatusCode::OK {
             log::info!("[pollux.checker] found reproduced build for {}", crate_info);
-            let url = url::Url::from_str(&endpoint)?;
+            let url = Url::from_str(&endpoint)?;
             return Ok(Some(url));
         }
 
