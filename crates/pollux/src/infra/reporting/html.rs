@@ -15,7 +15,7 @@ pub struct HtmlReporter {
 
 impl Default for HtmlReporter {
     fn default() -> Self {
-        Self::new(current_dir().unwrap())
+        Self::new(current_dir().expect("failed to evaluate current directory"))
     }
 }
 
