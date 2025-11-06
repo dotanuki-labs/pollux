@@ -45,7 +45,7 @@ fn should_analyse_project_from_path() {
         .args([
             "analyse",
             "project",
-            cargo_project.path().to_str().unwrap(),
+            cargo_project.path().to_str().expect("cannot stringify path"),
             "--no-color",
         ])
         .assert()
@@ -99,7 +99,7 @@ fn should_cleanup_caches() {
         .args([
             "analyse",
             "project",
-            cargo_project.path().to_str().unwrap(),
+            cargo_project.path().to_str().expect("cannot stringify path"),
             "--no-color",
         ])
         .assert()
@@ -107,7 +107,7 @@ fn should_cleanup_caches() {
 
     sut().args(["cleanup", "everything"]).assert().success();
 
-    let cache_folder = home_dir().unwrap().join(".pollux");
+    let cache_folder = home_dir().expect("cannot stringify path").join(".pollux");
 
     assertor::assert_that!(cache_folder.exists()).is_false()
 }

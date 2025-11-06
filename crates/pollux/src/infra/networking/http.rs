@@ -16,13 +16,14 @@ pub static HTTP_CLIENT: LazyLock<Arc<HTTPClient>> = LazyLock::new(|| {
     let user_agent = format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
 
     let mut headers = header::HeaderMap::new();
-    headers.insert(header::USER_AGENT, header::HeaderValue::from_str(&user_agent).unwrap());
+    let user_agent = header::HeaderValue::from_str(&user_agent).expect("invalid header value");
+    headers.insert(header::USER_AGENT, user_agent);
 
     let base_http_client = reqwest::Client::builder()
         .default_headers(headers)
         .timeout(Duration::from_secs(15))
         .build()
-        .unwrap();
+        .expect("cannot build HTTP client");
 
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(MAX_HTTP_RETRY_ATTEMPTS);
 
