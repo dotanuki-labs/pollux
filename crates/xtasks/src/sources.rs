@@ -24,7 +24,11 @@ fn check_code_smells(shell: &Shell) -> anyhow::Result<()> {
     println!("🔥 Checking smells in Rust code (clippy)");
     println!();
 
-    cmd!(shell, "cargo clippy --all-targets --all-features -- -D warnings").run()?;
+    cmd!(
+        shell,
+        "cargo clippy --workspace --all-targets --all-features -- -D warnings"
+    )
+    .run()?;
 
     Ok(())
 }

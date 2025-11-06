@@ -85,13 +85,13 @@ fn compute_checksums(shell: &Shell) -> anyhow::Result<()> {
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|entry| {
-            let path = entry.path().to_str().unwrap();
+            let path = entry.path().to_str().expect("cannot stringify path");
             path.contains("pollux-x86_64") || path.contains("pollux-aarch64")
         })
         .filter(|entry| entry.file_type().is_file())
         .map(|entry| {
             let name = entry.file_name();
-            let contents = fs::read(entry.path()).unwrap();
+            let contents = fs::read(entry.path()).expect("cannot read file contents as bytes");
             let digest = Sha256::digest(contents);
             format!("{} : {}", name.to_string_lossy(), hex::encode(digest))
         })

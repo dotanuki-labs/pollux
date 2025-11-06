@@ -52,6 +52,22 @@ url = "=2.5.7"
 xshell = "=0.2.7"
 walkdir = "=2.5.0"
 
+[workspace.lints.rust]
+future_incompatible = { level = "deny", priority = -1 }
+nonstandard_style = "deny"
+rust_2018_idioms = "deny"
+unsafe_code = "deny"
+unused_lifetimes = "deny"
+unused_macro_rules = "deny"
+unused_qualifications = { level = "deny", priority = -1 }
+
+[workspace.lints.clippy]
+todo = "deny"
+unimplemented = "deny"
+unnested_or_patterns = "deny"
+zero_sized_map_values = "deny"
+
+
 [profile.release]
 strip = true
 lto = true
