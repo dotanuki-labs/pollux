@@ -39,7 +39,7 @@ minijinja = "=2.13.0"
 serde = { version = "=1.0.228", features = ["derive"] }
 serde_json = "=1.0.145"
 ractor = "=0.15.9"
-reqwest = { version = "=0.12.24", default-features = false, features = ["json", "rustls-tls", "charset", "system-proxy", "http2"] }
+reqwest = { version = "=0.12.25", default-features = false, features = ["json", "rustls-tls", "charset", "system-proxy", "http2"] }
 reqwest-middleware = "0.4.2"
 reqwest-retry = "0.8.0"
 packageurl = "=0.5.0"
