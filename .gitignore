@@ -9,5 +9,6 @@ pollux-report.html
 .fleet
 .DS_STORE
 .idea
+.rumdl_cache
 
 
