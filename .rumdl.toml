@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 [global]
-disable = ["MD024"]
+disable = ["MD024", "MD057"]
 
 [MD013]
 line-length = 100
