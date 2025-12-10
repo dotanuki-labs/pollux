@@ -12,6 +12,8 @@
     "osvVulnerabilityAlerts": true,
     "dependencyDashboard": true,
     "labels": ["dependencies"],
+    "minimumReleaseAge": "5 days",
+    "internalChecksFilter": "strict",
     "packageRules": [
         {
             "description": ["Rust"],
