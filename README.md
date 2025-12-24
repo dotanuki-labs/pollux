@@ -85,10 +85,10 @@ pollux inquire --output html --coverage large
 `pollux` defines a fixed amount of popular crates to check according to
 the `coverage` argument, namely:
 
-- `small`  : top 100 most downloaded crates
+- `small` : top 100 most downloaded crates
 - `medium` : top 500 most downloaded crates
-- `large`  : top 1000 most downloaded crates
-- `huge`   : top 5000 most downloaded crates
+- `large` : top 1000 most downloaded crates
+- `huge` : top 5000 most downloaded crates
 
 ### Analysing transitive dependencies
 
