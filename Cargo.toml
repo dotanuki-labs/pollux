@@ -28,7 +28,7 @@ camino = "=1.2.2"
 cargo-lock = "=11.0.0"
 clap = { version = "=4.5.53", features = ["derive"]}
 comfy-table = "=7.2.1"
-console = "=0.16.1"
+console = "=0.16.2"
 decompress = { version = "=0.6.0", default-features = false, features = ["targz"] }
 env_logger = "=0.11.8"
 hex = "=0.4.3"
