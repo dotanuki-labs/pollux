@@ -24,7 +24,7 @@ assertor = "=0.0.4"
 assert_cmd = "=2.1.1"
 better-panic = "=0.3.0"
 bytes = "=1.11.0"
-camino = "=1.2.1"
+camino = "=1.2.2"
 cargo-lock = "=11.0.0"
 clap = { version = "=4.5.53", features = ["derive"]}
 comfy-table = "=7.2.1"
