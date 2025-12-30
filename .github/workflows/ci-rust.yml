@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-24.04
     services:
       local-registry:
-        image: ghcr.io/kellnr/kellnr:5@sha256:993d50f8fd5f63f1b6f53a1de6392f6b84f83be6a15db371ca7ccd871036b793
+        image: ghcr.io/kellnr/kellnr:5@sha256:505c201052b98967d16581b7607329fdda0f0b2284176130bafe77c5a1d796e4
         ports:
           - 8000:8000
         options: >-
