@@ -16,7 +16,7 @@ jobs:
           persist-credentials: false
 
       - name: Restore pollux cache
-        uses: actions/cache/restore@9255dc7a253b0ccc959486e2bca901246202afeb # v5
+        uses: actions/cache/restore@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           key: ${{ runner.os }}-pollux-cache
           path: /home/runner/.pollux
@@ -25,7 +25,7 @@ jobs:
         uses: rvben/rumdl@98d24c98f4fef317e50837edde3b920d4c50e747 # v0.0.213
 
       - name: Configure Github Pages
-        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.1
 
       - name: Setup Rust tools
         uses: ./.github/actions/setup-rust
@@ -53,7 +53,7 @@ jobs:
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
 
       - name: Save pollux cache
-        uses: actions/cache/save@9255dc7a253b0ccc959486e2bca901246202afeb # v5
+        uses: actions/cache/save@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           key: ${{ runner.os }}-pollux-cache
           path: /home/runner/.pollux

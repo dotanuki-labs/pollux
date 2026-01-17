@@ -32,4 +32,4 @@ runs:
           shell: bash
           run: |
             sudo apt-get update
-            sudo apt-get install -qy build-essential musl-dev musl-tools binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu
+            sudo apt-get install -qy build-essential musl-dev musl-tools

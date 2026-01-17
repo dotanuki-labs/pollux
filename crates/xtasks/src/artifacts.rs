@@ -105,17 +105,26 @@ fn compute_checksums(shell: &Shell) -> anyhow::Result<()> {
 
 fn evaluate_build_targets() -> anyhow::Result<Vec<String>> {
     let runner_name = env::var("RUNNER_OS")?;
-    let platform = match runner_name.as_str() {
-        "Linux" => "unknown-linux-musl",
-        "macOS" => "apple-darwin",
+    let runner = match runner_name.as_str() {
+        "Linux" | "macOS" => runner_name,
         _ => bail!("Unsupported runner : {}", runner_name),
     };
 
-    let archs = vec!["x86_64", "aarch64"];
-    let targets = archs
-        .into_iter()
-        .map(|arch| format!("{arch}-{platform}"))
-        .collect::<Vec<_>>();
+    let arch_name = env::var("RUNNER_ARCH")?;
+    let arch = match arch_name.to_ascii_lowercase().as_str() {
+        "x64" => "x86_64",
+        "arm64" => "aarch64",
+        _ => bail!("Unsupported architecture : {}", arch_name),
+    };
+
+    let targets = match (runner.to_ascii_lowercase().as_str(), arch) {
+        ("linux", "x86_64") => vec!["x86_64-unknown-linux-musl"],
+        ("linux", "aarch64") => vec!["aarch64-unknown-linux-musl"],
+        ("macos", _) => vec!["x86_64-apple-darwin", "aarch64-apple-darwin"],
+        (_, _) => bail!("Unsupported combination : {}-{}", arch, runner),
+    };
+
+    let targets = targets.into_iter().map(|t| t.to_string()).collect::<Vec<_>>();
 
     Ok(targets)
 }
