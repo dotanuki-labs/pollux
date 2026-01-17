@@ -30,7 +30,7 @@ log.workspace = true
 minijinja.workspace = true
 ractor.workspace = true
 packageurl.workspace = true
-reqwest.workspace = true
+reqwest = { workspace = true, features = ["json", "charset", "system-proxy", "http2"] }
 reqwest-middleware.workspace = true
 reqwest-retry.workspace = true
 serde.workspace = true

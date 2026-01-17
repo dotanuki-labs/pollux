@@ -53,17 +53,14 @@ impl CratesDotIOClient {
     }
 
     pub async fn get_most_downloaded_crates(&self, page: u8, per_page: u8) -> anyhow::Result<PaginatedCratesListing> {
-        let endpoint = format!("{}/api/v1/crates", self.base_url);
-        let query_arguments = [
-            ("page", page.to_string()),
-            ("per_page", per_page.to_string()),
-            ("sort", "downloads".to_string()),
-        ];
+        let endpoint = format!(
+            "{}/api/v1/crates?page={}&per_page={}&sort=downloads",
+            self.base_url, page, per_page
+        );
 
         let paged = self
             .http_client
             .get(&endpoint)
-            .query(&query_arguments)
             .send()
             .await?
             .error_for_status()?
