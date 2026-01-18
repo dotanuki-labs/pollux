@@ -24,7 +24,7 @@ jobs:
         uses: crate-ci/committed@dc6f20ddd899fe6d6f0402807884c0a4b3176b53 # v1.1.10
 
       - name: Check MIT license on source files
-        uses: korandoru/hawkeye@8a5eee90ee67f37a3306ef064585fb45adc26753 # v6.4.0
+        uses: korandoru/hawkeye@9f58c8ed5347f5dbe58a4a393aaea2be293d6bda # v6.4.1
 
       - name: Check issues with GHA Workflows
         uses: zizmorcore/zizmor-action@e639db99335bc9038abc0e066dfcd72e23d26fb4 # v0.3.0
