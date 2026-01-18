@@ -27,7 +27,7 @@ bytes = "=1.11.0"
 camino = "=1.2.2"
 cargo-lock = "=11.0.0"
 clap = { version = "=4.5.54", features = ["derive"]}
-comfy-table = "=7.2.1"
+comfy-table = "=7.2.2"
 console = "=0.16.2"
 decompress = { version = "=0.6.0", default-features = false, features = ["targz"] }
 env_logger = "=0.11.8"
