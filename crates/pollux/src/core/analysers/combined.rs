@@ -102,28 +102,23 @@ mod tests {
     }
 
     fn fake_trusted_publishing_checker(scenario: &CrateScenario) -> FakeVeracityChecker {
-        if scenario.trusted_publishing_evidence.is_some() {
-            let package = CargoPackage::with(scenario.name, scenario.version);
+        let Some(evidence) = scenario.trusted_publishing_evidence else {
+            return FakeVeracityChecker(HashMap::new());
+        };
 
-            FakeVeracityChecker(HashMap::from([(
-                package,
-                scenario.trusted_publishing_evidence.unwrap().to_string(),
-            )]))
-        } else {
-            FakeVeracityChecker(HashMap::new())
-        }
+        let package = CargoPackage::with(scenario.name, scenario.version);
+
+        FakeVeracityChecker(HashMap::from([(package, evidence.to_string())]))
     }
 
     fn fake_reproducibility_checker(scenario: &CrateScenario) -> FakeVeracityChecker {
-        if scenario.reproducibility_evidence.is_some() {
-            let package = CargoPackage::with(scenario.name, scenario.version);
-            FakeVeracityChecker(HashMap::from([(
-                package,
-                scenario.reproducibility_evidence.unwrap().to_string(),
-            )]))
-        } else {
-            FakeVeracityChecker(HashMap::new())
-        }
+        let Some(evidence) = scenario.reproducibility_evidence else {
+            return FakeVeracityChecker(HashMap::new());
+        };
+
+        let package = CargoPackage::with(scenario.name, scenario.version);
+
+        FakeVeracityChecker(HashMap::from([(package, evidence.to_string())]))
     }
 
     fn crate_analyser(scenario: &CrateScenario) -> VeracityChecksAnalyser {
