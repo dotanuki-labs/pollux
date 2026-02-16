@@ -30,7 +30,7 @@ clap = { version = "=4.5.58", features = ["derive"]}
 comfy-table = "=7.2.2"
 console = "=0.16.2"
 decompress = { version = "=0.6.0", default-features = false, features = ["targz"] }
-env_logger = "=0.11.8"
+env_logger = "=0.11.9"
 hex = "=0.4.3"
 httpmock = "=0.8.3"
 human-panic = "=2.0.6"
