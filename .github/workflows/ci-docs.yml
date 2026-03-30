@@ -25,7 +25,7 @@ jobs:
         uses: rvben/rumdl@717c12ced0042eac2d68dc0948875d3f7001c293 # v0.1.59
 
       - name: Configure Github Pages
-        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.1
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       - name: Setup Rust tools
         uses: ./.github/actions/setup-rust
