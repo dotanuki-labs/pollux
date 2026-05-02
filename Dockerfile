@@ -6,7 +6,7 @@
 # https://kerkour.com/rust-docker-from-scratch
 # https://labs.iximiuz.com/tutorials/pitfalls-of-from-scratch-images
 #
-FROM rust:alpine3.21@sha256:f800c06daae24db26d34e43cc3a5c72e5aa863b0ef7f95569a0d13b1ad8891af AS builder
+FROM rust:alpine3.21@sha256:77d036177a4caf204bf23c6c68e1aa013a0d919fd40058eb27943295080fe869 AS builder
 
 RUN apk update && \
     apk upgrade --no-cache && \
