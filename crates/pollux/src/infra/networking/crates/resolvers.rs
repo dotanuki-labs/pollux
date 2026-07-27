@@ -77,7 +77,7 @@ impl LocalProjectDependenciesResolver {
     }
 
     fn generate_lockfile(&self) -> anyhow::Result<()> {
-        log::info!("[pollux.cargo] project root : {:?}", &self.project_root);
+        log::info!("[pollux.cargo] project root : {:?}", self.project_root);
         let cargo_update = Command::new("cargo")
             .current_dir(&self.project_root)
             .arg("update")
