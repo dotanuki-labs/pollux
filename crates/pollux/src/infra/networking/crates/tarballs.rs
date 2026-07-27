@@ -35,11 +35,11 @@ impl CrateArchiveDownloader {
         match fs::remove_dir_all(&project_dir) {
             Ok(_) => log::info!(
                 "[pollux.cargo] removed previous downloaded archive for {}",
-                &target_package
+                target_package
             ),
             Err(_) => log::info!(
                 "[pollux.cargo] cannot remove previous downloaded archive for : {}",
-                &target_package
+                target_package
             ),
         };
 
@@ -47,7 +47,7 @@ impl CrateArchiveDownloader {
         let tarball_path = project_dir.join("crate.tar.gz");
         fs::write(&tarball_path, downloaded).context("failed to save crate archive")?;
 
-        log::info!("[pollux.cargo] decompressing package : {}", &target_package);
+        log::info!("[pollux.cargo] decompressing package : {}", target_package);
 
         // we levaregate the targz format as per what similar crates like
         // https://crates.io/crates/crate_untar also do
@@ -63,7 +63,7 @@ impl CrateArchiveDownloader {
         // we remove the downloaded tarball after
         fs::remove_file(tarball_path).context("failed to remove tarball")?;
 
-        log::info!("[pollux.cargo] downloaded and extracted files for {}", &target_package);
+        log::info!("[pollux.cargo] downloaded and extracted files for {}", target_package);
         let output_dir = Utf8PathBuf::try_from(output_dir).context("cannot get an utf-8 path")?;
         Ok(output_dir)
     }

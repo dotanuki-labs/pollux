@@ -74,9 +74,9 @@ impl Actor for PolluxAnalyser {
     ) -> Result<(), ActorProcessingErr> {
         match message {
             AnalyserMessage::AnalysePackage(cargo_package) => {
-                log::info!("[pollux.actor] starting analysis for package {}", &cargo_package);
+                log::info!("[pollux.actor] starting analysis for package {}", cargo_package);
                 let maybe_analysed = self.veracity_analyser.execute(&cargo_package).await.ok();
-                log::info!("[pollux.actor] finished analysis for package {}", &cargo_package);
+                log::info!("[pollux.actor] finished analysis for package {}", cargo_package);
                 outcomes.push((cargo_package, maybe_analysed));
             },
             AnalyserMessage::AggregateResults(reply) => {
@@ -103,7 +103,7 @@ impl Actor for PolluxAnalyser {
 
                             (None, Some(_)) => with_reproducible_builds += 1,
                             (None, None) => {
-                                log::info!("[pollux.actor] no stats for : {}", &package);
+                                log::info!("[pollux.actor] no stats for : {}", package);
                             },
                         }
                     }
