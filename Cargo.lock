@@ -1960,9 +1960,9 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
 name = "ractor"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55108c0d44d95984397dbb134e627f2dab48ddb0fb692c1e573b2167a6492e17"
+checksum = "da710d352878a582c462052dc276dd84b344b67708ac785f02c07f83b6cd8500"
 dependencies = [
  "bon",
  "dashmap",
