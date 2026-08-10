@@ -22,7 +22,7 @@ jobs:
           path: /home/runner/.pollux
 
       - name: Lint Markdown files
-        uses: rvben/rumdl@f00215f54d79d6ac56a8e34b208a216eb5bf7da6 # v0.2.51
+        uses: rvben/rumdl@9faf4696d56c0cff426a2f85b3fd476ebe0d0ec0 # v0.2.52
 
       - name: Configure Github Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
