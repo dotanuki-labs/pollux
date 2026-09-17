@@ -22,7 +22,7 @@ jobs:
 
       - name: Compute current version
         id: release-tag
-        uses: ./.github/actions/compute-version
+        uses: $/.github/actions/compute-version
 
       - name: Docker metadata
         id: docker-metadata

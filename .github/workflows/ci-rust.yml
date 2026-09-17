@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Rust tools
-        uses: ./.github/actions/setup-rust
+        uses: $/.github/actions/setup-rust
 
       - name: Run project tests
         run: cargo xtasks tests
@@ -65,7 +65,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Rust tools
-        uses: ./.github/actions/setup-rust
+        uses: $/.github/actions/setup-rust
         with:
           install-extra-tools: true
 
@@ -95,7 +95,7 @@ jobs:
           pattern: pollux-binaries-*
 
       - name: Setup Rust tools
-        uses: ./.github/actions/setup-rust
+        uses: $/.github/actions/setup-rust
 
       - name: Generate additional artifacts
         run: cargo xtasks artifacts extras
@@ -133,7 +133,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Rust tools
-        uses: ./.github/actions/setup-rust
+        uses: $/.github/actions/setup-rust
 
       - name: Publish on local registry
         run: cargo publish -p pollux --registry local # zizmor: ignore[use-trusted-publishing]
