@@ -23,8 +23,13 @@ jobs:
         if: ${{ github.ref != 'refs/heads/main' }}
         uses: crate-ci/committed@faeed42f2e10c244533a01525f13c4d8b6ce383f # v1.1.11
 
+      - name: Install hawkeye
+        uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        with:
+          tool: hawkeye
+
       - name: Check MIT license on source files
-        uses: korandoru/hawkeye@c57037afedf940370c41eb660837c8aa928d472a # v6.5.1
+        run: hawkeye check
 
       - name: Check issues with GHA Workflows
         uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
