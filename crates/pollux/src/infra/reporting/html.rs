@@ -3,6 +3,7 @@
 
 use crate::core::models::EcosystemInquiringResults;
 use minijinja::Environment;
+use minijinja::value::Serde;
 use std::env::current_dir;
 use std::fs;
 use std::path::PathBuf;
@@ -30,7 +31,7 @@ impl HtmlReporter {
         env.add_template("pollux-report", TEMPLATE)?;
         let template = env.get_template("pollux-report")?;
 
-        let rendered = template.render(results)?;
+        let rendered = template.render(Serde(results))?;
         fs::write(report_file.clone(), rendered)?;
 
         println!();
