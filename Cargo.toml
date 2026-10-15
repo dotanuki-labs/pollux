@@ -37,7 +37,7 @@ human-panic = "=2.0.8"
 log = "=0.4.34"
 minijinja = "=3.0.0"
 serde = { version = "=1.0.229", features = ["derive"] }
-serde_json = "=1.0.151"
+serde_json = "=1.0.152"
 ractor = "=0.16.5"
 reqwest = "=0.13.5"
 reqwest-middleware = "=0.5.2"
