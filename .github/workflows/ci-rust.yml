@@ -11,7 +11,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Project checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -25,7 +25,7 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
 
   tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Project checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -40,7 +40,7 @@ jobs:
 
   security:
     needs: [lint, tests]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Project checkout
@@ -80,7 +80,7 @@ jobs:
 
   extras:
     needs: build
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Project checkout
@@ -114,7 +114,7 @@ jobs:
 
   publish:
     needs: build
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     services:
       local-registry:
         image: ghcr.io/kellnr/kellnr:5@sha256:1d8989771c3ce3f7d753f01f7859271c18fe18829e178666525c7e7f472f6f6f
