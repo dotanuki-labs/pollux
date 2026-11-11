@@ -1878,9 +1878,9 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
 name = "ractor"
-version = "0.16.5"
+version = "0.16.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fac09d231cc3efcabd2e9ddb085d71ce90fe5725a18ec7b9aad8347aa33c5ab0"
+checksum = "51ab917fe82c6a05ffc94542d170713600eecdb240eab09c6d072dee3f5da1d6"
 dependencies = [
  "bon",
  "dashmap",
